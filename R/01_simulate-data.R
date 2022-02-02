@@ -99,5 +99,5 @@ for(i in 1:x_dims) {
 t(catches)
 
 ## check total to see if some fish were excluded
-sum(catches) # = 99
+sum(catches)
 
