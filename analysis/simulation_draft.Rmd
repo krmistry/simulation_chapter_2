@@ -1,0 +1,429 @@
+---
+title: "Simulation Study - Chapter Two"
+author: "Kelly Mistry"
+date: "1/28/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(spatstat) ## for calculating nearest neighbor distances
+library(ggplot2)
+library(reshape2)
+library(cowplot)
+```
+
+## Simulation Study
+
+### Questions to answer & considerations
+
+-   Think ecologically for this one, more than management
+
+    -   Options:
+
+        -   random distribution and then 2 or 3 with increasing levels of aggregation
+        -   range shifts over time would be interesting to try, the question then would be how well does each method capture this
+
+-   Send a fairly detailed proposal to Sarah for comments by mid-February
+
+-   How do I decide how many fish are caught in each haul?
+
+-   I may need to assume that the survey is directly sampling reality, so I don't have to do two steps of sampling (existing population & how it is sampled by the survey)
+
+-   Look into the literature to see what has been done about comparing survey designs, and if there isn't too much published yet than playing with that may be interesting - ask Cecilia if she thinks this is worth pursuing
+
+-   
+
+```{r set up}
+
+
+## set (x,y) limits for grid size; min = (0,0)
+x_max <- 500
+y_max <- 500
+
+
+## number of fish/clusters
+n_fish <- 100
+
+
+```
+
+#### Randomly distributed locations
+
+```{r case_study_1}
+
+set.seed(818)
+
+## assumes nearest neighbor distances ~ Poisson(lambda)
+
+## locations of fish/clusters
+rdm_x_loc <- runif(n_fish, 0, x_max)
+rdm_y_loc <- runif(n_fish, 0, y_max)
+
+## quick plot of locations
+plot(rdm_x_loc, rdm_y_loc, pch = 16, xlim = c(0, x_max), ylim = c(0, y_max))
+abline(h = seq(y_max/5, (y_max/5)*4, y_max/5), lty = "dashed")
+abline(v = seq(x_max/5, (x_max/5)*4, x_max/5), lty = "dashed")
+
+## calculate nearest neighbor distances
+rdm_nnd <- nndist(rdm_x_loc, rdm_y_loc)
+# plot distances
+hist(rdm_nnd)
+```
+
+#### Single disparate cluster
+
+```{r case_study_2a}
+set.seed(818)
+## assumes nearest neighbor distances ~ NegBin(size, mu)
+
+## locations of fish/clusters as log-normal
+agg_x_loc_a <- rnorm(n_fish, 250, 100)
+agg_y_loc_a <- rnorm(n_fish, 250, 100)
+
+
+## quick plot of locations
+plot(agg_x_loc_a, agg_y_loc_a, pch = 16, xlim = c(0, x_max), ylim = c(0, y_max))
+abline(h = seq(y_max/5, (y_max/5)*4, y_max/5), lty = "dashed")
+abline(v = seq(x_max/5, (x_max/5)*4, x_max/5), lty = "dashed")
+
+## calculate nearest neighbor distances
+agg_nnd_a <- nndist(agg_x_loc_a, agg_y_loc_a)
+# plot distances
+hist(agg_nnd_a)
+```
+
+#### Single tight cluster
+
+```{r case_study_2b}
+set.seed(818)
+## assumes nearest neighbor distances ~ NegBin(size, mu)
+
+## locations of fish/clusters as normal
+agg_x_loc_b <- rnorm(n_fish, 250, 20)
+agg_y_loc_b <- rnorm(n_fish, 250, 20)
+
+## quick plot of locations
+plot(agg_x_loc_b, agg_y_loc_b, pch = 16, xlim = c(0, x_max), ylim = c(0, y_max))
+abline(h = seq(y_max/5, (y_max/5)*4, y_max/5), lty = "dashed")
+abline(v = seq(x_max/5, (x_max/5)*4, x_max/5), lty = "dashed")
+
+## calculate nearest neighbor distances
+agg_nnd_b <- nndist(agg_x_loc_b, agg_y_loc_b)
+# plot distances
+hist(agg_nnd_b)
+
+```
+
+#### Multiple disparate clusters
+
+```{r case_study_2c}
+set.seed(818)
+
+## locations of fish/clusters as normal
+agg_x_loc_c <- c(rnorm(n_fish/2, 100, 50), rnorm(n_fish/2, 300, 50))
+agg_y_loc_c <- c(rnorm(n_fish/2, 100, 50), rnorm(n_fish/2, 300, 50))
+
+## quick plot of locations
+plot(agg_x_loc_c, agg_y_loc_c, pch = 16, xlim = c(0, x_max), ylim = c(0, y_max))
+abline(h = seq(y_max/5, (y_max/5)*4, y_max/5), lty = "dashed")
+abline(v = seq(x_max/5, (x_max/5)*4, x_max/5), lty = "dashed")
+
+## calculate nearest neighbor distances
+agg_nnd_c <- nndist(agg_x_loc_c, agg_y_loc_c)
+# plot distances
+hist(agg_nnd_c)
+```
+
+#### Multiple tight clusters
+
+```{r case_study_2d}
+set.seed(818)
+
+## locations of fish/clusters as normal
+agg_x_loc_d <- c(rnorm(n_fish/4, 100, 20), rnorm(n_fish/4, 200, 20),
+                 rnorm(n_fish/4, 300, 20), rnorm(n_fish/4, 400, 20))
+agg_y_loc_d <- c(rnorm(n_fish/4, 100, 20), rnorm(n_fish/4, 200, 20),
+                 rnorm(n_fish/4, 300, 20), rnorm(n_fish/4, 400, 20))
+
+## quick plot of locations
+plot(agg_x_loc_d, agg_y_loc_d, pch = 16, xlim = c(0, x_max), ylim = c(0, y_max))
+abline(h = seq(y_max/5, (y_max/5)*4, y_max/5), lty = "dashed")
+abline(v = seq(x_max/5, (x_max/5)*4, x_max/5), lty = "dashed")
+
+## calculate nearest neighbor distances
+agg_nnd_d <- nndist(agg_x_loc_d, agg_y_loc_d)
+# plot distances
+hist(agg_nnd_d)
+```
+
+```{r plot_scenarios}
+
+
+par(mfrow=c(3,2))
+plot(rdm_x_loc, rdm_y_loc, pch = 16, xlim = c(0, x_max), ylim = c(0, y_max))
+abline(v = seq(y_max/4, (y_max/4)*3, y_max/4))
+#abline(h = seq(y_max/4, (y_max/4)*3, y_max/4), lty = "dashed")
+text(x = c(10, 135, 260, 385), y = rep(500, 4), labels = c("A", "B", "C", "D"), col = "red", font = 2)
+plot(agg_x_loc_a, agg_y_loc_a, pch = 16, xlim = c(0, x_max), ylim = c(0, y_max))
+# abline(h = seq(y_max/5, (y_max/5)*4, y_max/5), lty = "dashed")
+abline(v = seq(y_max/4, (y_max/4)*3, y_max/4))
+text(x = c(10, 135, 260, 385), y = rep(500, 4), labels = c("A", "B", "C", "D"), col = "red", font = 2)
+plot(agg_x_loc_b, agg_y_loc_b, pch = 16, xlim = c(0, x_max), ylim = c(0, y_max))
+# abline(h = seq(y_max/5, (y_max/5)*4, y_max/5), lty = "dashed")
+abline(v = seq(y_max/4, (y_max/4)*3, y_max/4))
+text(x = c(10, 135, 260, 385), y = rep(500, 4), labels = c("A", "B", "C", "D"), col = "red", font = 2)
+plot(agg_x_loc_c, agg_y_loc_c, pch = 16, xlim = c(0, x_max), ylim = c(0, y_max))
+# abline(h = seq(y_max/5, (y_max/5)*4, y_max/5), lty = "dashed")
+abline(v = seq(y_max/4, (y_max/4)*3, y_max/4))
+text(x = c(10, 135, 260, 385), y = rep(500, 4), labels = c("A", "B", "C", "D"), col = "red", font = 2)
+plot(agg_x_loc_d, agg_y_loc_d, pch = 16, xlim = c(0, x_max), ylim = c(0, y_max))
+# abline(h = seq(y_max/5, (y_max/5)*4, y_max/5), lty = "dashed")
+abline(v = seq(y_max/4, (y_max/4)*3, y_max/4))
+text(x = c(10, 135, 260, 385), y = rep(500, 4), labels = c("A", "B", "C", "D"), col = "red", font = 2)
+
+
+par(mfrow=c(3,2))
+hist(rdm_nnd)
+hist(agg_nnd_a)
+hist(agg_nnd_b)
+hist(agg_nnd_c)
+hist(agg_nnd_d)
+
+```
+
+#### Harvest fish from simulated locations
+
+Below code is doing some weird things at the moment (supposedly catching more fish than exist), so need to figure out what's going on here
+
+```{r harvest}
+set.seed(818)
+
+## assumes "catches" occur in 50x50 blocks, with 60% coverage of the space
+
+x_breaks <- sort(sample(seq(0, 450, 50), 8))
+y_breaks <- sort(sample(seq(0, 450, 50), 8))
+
+# Plot above to see where catch squares are:
+x_start <- x_breaks
+x_end <- c(x_breaks+50)
+y_start <- y_breaks
+y_end <- c(y_breaks+50)
+coverage <- as.data.frame(expand.grid(x_breaks, y_breaks))
+
+ggplot(data = coverage) +
+  geom_polygon(aes(x = Var1, y = Var2))
+
+
+x_dims <- length(x_breaks) - 1
+y_dims <- length(y_breaks) - 1
+
+## empty matrix for recording catches
+catches <- matrix(NA, x_dims, y_dims)
+
+## loop over grid cells
+for(i in 1:x_dims) {
+  for(j in 1:y_dims) {
+    ## fish within x-limits
+    xc <- rdm_x_loc > x_breaks[i] & rdm_x_loc <= x_breaks[i + 1]
+    ## fish within y-limits
+    yc <- rdm_y_loc > y_breaks[j] & rdm_y_loc <= y_breaks[j + 1]
+    ## fish within both limits
+    catches[i, length(x_breaks) - j] <- sum(xc & yc)
+  }
+}
+
+
+## Putting the above process into a function
+catch_fun <- function(x_loc, 
+                      y_loc, 
+                      x_breaks, 
+                      y_breaks) {
+  # Setting up looping vectors
+  x_dims <- length(x_breaks) - 1
+  y_dims <- length(y_breaks) - 1
+  
+  ## empty matrix for recording catches
+  catches <- matrix(NA, x_dims, y_dims)
+  
+  ## loop over grid cells
+  for(i in 1:x_dims) {
+    for(j in 1:y_dims) {
+      ## fish within x-limits
+      xc <- x_loc > x_breaks[i] & x_loc <= x_breaks[i + 1]
+      ## fish within y-limits
+      yc <- y_loc > y_breaks[j] & y_loc <= y_breaks[j + 1]
+      ## fish within both limits
+      catches[i, length(x_breaks) - j] <- sum(xc & yc)
+    }
+  }
+  return(catches)
+}
+
+catches_r <- catch_fun(rdm_x_loc, rdm_y_loc, x_breaks, y_breaks)
+catches_a <- catch_fun(agg_x_loc_a, agg_x_loc_a, x_breaks, y_breaks)
+catches_b <- catch_fun(agg_x_loc_b, agg_x_loc_b, x_breaks, y_breaks)
+catches_c <- catch_fun(agg_x_loc_c, agg_x_loc_c, x_breaks, y_breaks)
+catches_d <- catch_fun(agg_x_loc_d, agg_x_loc_d, x_breaks, y_breaks)
+
+
+## examine catches
+t(catches_r)
+t(catches_a)
+t(catches_b)
+t(catches_c)
+t(catches_d)
+
+## check total to see if some fish were excluded
+sum(catches_r)
+sum(catches_a)
+sum(catches_b)
+sum(catches_c)
+sum(catches_d)
+```
+
+#### Setting up time series
+
+Initial settings:
+
+-   30 years for the timeseries, so I can sample every other year and get 15 years to put through the models (which is basically the amount of data that I have with POP and northern rockfish)
+
+-   sigma for the white noise version is set to 1.
+
+```{r timeseries_rw}
+
+#### Random walk 
+
+# Number of years
+years <- 30
+
+# Sigma for normal error
+sigma_wn <- 5
+
+# List of years, with a matrix with x and y coordinates in each year
+rdm_timeseries_wn <- list()
+year_matrix <- as.data.frame(matrix(NA, nrow = n_fish, ncol = 2))
+colnames(year_matrix) <- c("x_loc", "y_loc")
+year_matrix[, 1] <- rdm_x_loc
+year_matrix[, 2] <- rdm_y_loc
+rdm_timeseries_wn[[1]] <- year_matrix
+
+for(year in 2:years) {
+  x_year_error <- rnorm(n_fish, 0, sigma_wn)
+  y_year_error <- rnorm(n_fish, 0, sigma_wn)
+  x_loc <- rdm_timeseries_wn[[year - 1]][, 1] + x_year_error
+  y_loc <- rdm_timeseries_wn[[year - 1]][, 2] + y_year_error
+  rdm_timeseries_wn[[year]] <- cbind(x_loc, y_loc)
+}
+  
+
+# Plotting movements of all fish
+all_fish_moves_wn <- list()
+for(fish in 1:n_fish) {
+  fish_mov <- as.data.frame(matrix(NA, nrow = years, ncol = 4))
+  colnames(fish_mov) <- c("x_loc", "y_loc", "fish", "year")
+  for(year in 1:years) {
+  fish_mov[year, 1] <- rdm_timeseries_wn[[year]][fish, 1]
+  fish_mov[year, 2] <- rdm_timeseries_wn[[year]][fish, 2]
+  fish_mov[year, 3] <- fish
+  fish_mov[, 4] <- c(1:years)
+  }
+  all_fish_moves_wn[[fish]] <- fish_mov
+}
+
+# Melting all fish into 1 dataframe to plot against each other
+all_fish_melt_wn <- melt(all_fish_moves_wn, id.vars = c("x_loc", "y_loc", "year"))
+all_fish_melt_wn <- all_fish_melt_wn[, c(1:3, 5)]
+colnames(all_fish_melt_wn)[4] <- "fish_id"
+
+# Plotting all fish, to see how much they move on the whole 
+all_fish_wn_plot <- ggplot(all_fish_melt_wn, aes(x = x_loc, y = y_loc, color = as.factor(fish_id))) +
+  geom_point() +
+  geom_path() +
+  theme(legend.position = "none")
+
+# Plotting a few individual fish to see if there is a pattern to their movement between years (there shouldn't be)
+sample_fish_wn_plot <- ggplot(all_fish_melt_wn[all_fish_melt_wn$fish_id %in% c(10, 20, 30, 40, 50, 60, 70, 80, 90, 100),]) +
+  geom_point(aes(x = x_loc, y = y_loc, color = year)) +
+  geom_path(aes(x = x_loc, y = y_loc, color = year)) +
+  facet_wrap(vars(fish_id), scales = "free") +
+  theme(legend.position = "bottom")
+
+plot_grid(all_fish_wn_plot, sample_fish_wn_plot, labels = c("A", "B"))
+
+```
+
+```{r timeseries_ds}
+
+### Directional shift
+# alpha_slope <- c(-0.9, -0.9)
+alpha_int <- c(-5, -5) # x and y values; positive means moving north or east, negative means moving south or west
+# Do I want this to have some white noise attached, or for it to be set to the same value throughout the timeseries? I think for clarity, it makes sense to initially have it as a set value rather than drawn from a distribution
+
+# Could use the same sigma as in the random walk, but for now set it separately 
+sigma_ds <- 5
+
+rdm_timeseries_ds <- list()
+year_matrix <- as.data.frame(matrix(NA, nrow = n_fish, ncol = 2))
+colnames(year_matrix) <- c("x_loc", "y_loc")
+year_matrix[, 1] <- rdm_x_loc
+year_matrix[, 2] <- rdm_y_loc
+rdm_timeseries_ds[[1]] <- year_matrix
+
+# Version using an alpha as an intercept, added to each year's estimate
+for(year in 2:years) {
+  x_year_error <- rnorm(n_fish, 0, sigma_ds)
+  y_year_error <- rnorm(n_fish, 0, sigma_ds)
+  x_loc <- rdm_timeseries_ds[[year - 1]][, 1] + alpha_int[1] + x_year_error
+  y_loc <- rdm_timeseries_ds[[year - 1]][, 2] + alpha_int[2] + y_year_error
+  rdm_timeseries_ds[[year]] <- cbind(x_loc, y_loc)
+}
+
+# # Version using an alpha as a slope for the year's estimate
+# for(year in 2:years) {
+#   x_year_error <- rnorm(n_fish, 0, sigma_ds)
+#   y_year_error <- rnorm(n_fish, 0, sigma_ds)
+#   x_loc <- rdm_timeseries_ds[[year - 1]][, 1]*alpha_slope[1] + x_year_error
+#   y_loc <- rdm_timeseries_ds[[year - 1]][, 2]*alpha_slope[2] + y_year_error
+#   rdm_timeseries_ds[[year]] <- cbind(x_loc, y_loc)
+# }
+# 
+# # The above does a weird thing where it clusters at 0 - probably best to stay with the intercept version
+
+# Plotting movements of all fish
+all_fish_moves_ds <- list()
+for(fish in 1:n_fish) {
+  fish_mov <- as.data.frame(matrix(NA, nrow = years, ncol = 4))
+  colnames(fish_mov) <- c("x_loc", "y_loc", "fish", "year")
+  for(year in 1:years) {
+  fish_mov[year, 1] <- rdm_timeseries_ds[[year]][fish, 1]
+  fish_mov[year, 2] <- rdm_timeseries_ds[[year]][fish, 2]
+  fish_mov[year, 3] <- fish
+  fish_mov[, 4] <- c(1:years)
+  }
+  all_fish_moves_ds[[fish]] <- fish_mov
+}
+
+# Melting all fish into 1 dataframe to plot against each other
+all_fish_melt_ds <- melt(all_fish_moves_ds, id.vars = c("x_loc", "y_loc", "year"))
+all_fish_melt_ds <- all_fish_melt_ds[, c(1:3, 5)]
+colnames(all_fish_melt_ds)[4] <- "fish_id"
+
+all_fish_ds_plot <- ggplot(all_fish_melt_ds, aes(x = x_loc, y = y_loc, color = as.factor(fish_id))) +
+  geom_point() +
+  geom_path() +
+  theme(legend.position = "none")
+
+# Plotting a few individual fish to see if there is a pattern to their movement between years (there shouldn't be)
+sample_fish_ds_plot <- ggplot(all_fish_melt_ds[all_fish_melt_ds$fish_id %in% c(10, 20, 30, 40, 50, 60, 70, 80, 90, 100),]) +
+  geom_point(aes(x = x_loc, y = y_loc, color = year)) +
+  geom_path(aes(x = x_loc, y = y_loc, color = year)) +
+  facet_wrap(vars(fish_id), scales = "free") +
+  theme(legend.position = "bottom")
+
+## Putting these plots together to show folks:
+plot_grid(all_fish_ds_plot, sample_fish_ds_plot, labels = c("A", "B"))
+
+
+```
