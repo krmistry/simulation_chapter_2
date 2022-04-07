@@ -15,6 +15,7 @@ y_max <- 500
 ## number of fish
 n_fish <- 100
 
+# testing push
 
 ### Random, one cluster loose, one cluster tight, two clusters loose, four 
 ### clusters tight at time 0
