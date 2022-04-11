@@ -14,8 +14,9 @@ x_max <- 500
 y_max <- 500
 ## number of fish
 n_fish <- 100
+## number of cluster scenarios
+n_clusters <- 5
 
-# testing push
 
 ### Random, one cluster loose, one cluster tight, two clusters loose, four 
 ### clusters tight at time 0
@@ -70,6 +71,8 @@ clusters$cluster_D$nnd <- nndist(clusters$cluster_D$x_loc,
 ## Parameters
 # Number of years
 years <- 30
+# Setting arbitrary years (for dataframe labeling)
+all_years <- paste0("X", c((2020-29):2020))
 # Sigma for error in random walk
 sigma_rdm <- 5
 ### Directional shift parameters
@@ -108,6 +111,7 @@ for (clust_type in 1:length(clusters)) {
     timeseries$rdm[[clust_type]][[year]] <- as.data.frame(cbind(x_loc, y_loc, nnd))
     timeseries$rdm[[clust_type]][[year]]$fish <- timeseries$rdm[[clust_type]][[1]]$fish
   }
+  names(timeseries$rdm[[clust_type]]) <- all_years
 }
 names(timeseries$rdm) <- names(clusters)
 
@@ -131,6 +135,7 @@ for (clust_type in 1:length(clusters)) {
     timeseries$dir[[clust_type]][[year]] <- as.data.frame(cbind(x_loc, y_loc, nnd))
     timeseries$dir[[clust_type]][[year]]$fish <- timeseries$dir[[clust_type]][[1]]$fish
   }
+  names(timeseries$dir[[clust_type]]) <- all_years
 }
 names(timeseries$dir) <- names(clusters)
 
@@ -160,6 +165,9 @@ y_start <- y_breaks
 y_end <- c(y_breaks+50)
 y_blocks <- as.data.frame(cbind(y_start, y_end))
 #coverage <- as.data.frame(expand.grid(x_breaks, y_breaks))
+
+# Number of total hauls (roughly 3 times the number of fish)
+total_hauls <- 300
 
 # Plot of 60% coverage example
 plot <- ggplot() +
@@ -251,6 +259,9 @@ catch_fun <- function(fish_data,
   colnames(zero_catches) <- c("x_loc", "y_loc")
   zero_catches$x_loc <- runif(zero_num, 0, 500)
   zero_catches$y_loc <- runif(zero_num, 0, 500)
+  # Not currently double checking to be sure I don't have a 0 catch where fish
+  # actually are, but they could be missed in the real world anyway, right? So 
+  # I'll leave it like this unless someone tells me differently
   
   return(list(catches_matrix = catches, 
               total_catch = sum(catches),
@@ -258,18 +269,94 @@ catch_fun <- function(fish_data,
               zero_catches_locs = zero_catches))
 }
 
-test <- catch_fun(timeseries$rdm$cluster_A[[1]], 9, 9, 300)
-x <- rbind(test$catch_locs[,c(1:2)], test$zero_catches_locs)
+## Levels of catch coverage - 80% and 20%
+coverage_list <- c("catch_eighty", "catch_twenty")
 
-
-
-
+# Creating catch data for randomly moving timeseries
 catch_eighty <- list()
 catch_twenty <- list()
-for(year in 1:years) {
-  catch_eighty[[year]] <- catch_fun(timeseries$rdm$cluster_A[[year]], 9, 9, 300)
-  catch_twenty[[year]] <- catch_fun(timeseries$rdm$cluster_A[[year]], 2, 1, 300)
+for(cluster in 1:n_clusters) {
+  catch_eighty[[cluster]] <- list()
+  catch_twenty[[cluster]] <- list()
+  for(year in 1:years) {
+    catch_eighty[[cluster]][[year]] <- catch_fun(timeseries$rdm[[cluster]][[year]], 9, 9, total_hauls)
+    catch_twenty[[cluster]][[year]] <- catch_fun(timeseries$rdm[[cluster]][[year]], 2, 1, total_hauls)
+  }
+  names(catch_eighty[[cluster]]) <- all_years
+  names(catch_twenty[[cluster]]) <- all_years
 }
-catch_list <- list(catch_eighty, catch_twenty)
+names(catch_eighty) <- names(clusters)
+names(catch_twenty) <- names(clusters)
+catch_rdm_list <- list("catch_eighty" = catch_eighty, "catch_twenty" = catch_twenty)
 
+# Creating catch data for cirectionally shifting timeseries
+catch_eighty <- list()
+catch_twenty <- list()
+for(cluster in 1:n_clusters) {
+  catch_eighty[[cluster]] <- list()
+  catch_twenty[[cluster]] <- list()
+  for(year in 1:years) {
+    catch_eighty[[cluster]][[year]] <- catch_fun(timeseries$dir[[cluster]][[year]], 9, 9, total_hauls)
+    catch_twenty[[cluster]][[year]] <- catch_fun(timeseries$dir[[cluster]][[year]], 2, 1, total_hauls)
+  }
+  names(catch_eighty[[cluster]]) <- all_years
+  names(catch_twenty[[cluster]]) <- all_years
+}
+names(catch_eighty) <- names(clusters)
+names(catch_twenty) <- names(clusters)
+catch_dir_list <- list("catch_eighty" = catch_eighty, "catch_twenty" = catch_twenty)
+
+
+test <- catch_fun(timeseries$rdm$cluster_A[[1]], 9, 9, total_hauls)
+x <- rbind(test$catch_locs[,c(1:2)], test$zero_catches_locs)
+x[, 3] <- c(rep(1, nrow(test$catch_locs)), rep(0, nrow(test$zero_catches_locs)))
+
+
+
+
+## Formatting catch data into usable timeseries'
+catch_formatting_fun <- function(catch_fun_output) {
+  catches <- rbind(catch_fun_output$catch_locs[,c(1:2)], catch_fun_output$zero_catches_locs)
+  catches$metric_tons <- c(rep(1, nrow(catch_fun_output$catch_locs)), 
+                           rep(0, nrow(catch_fun_output$zero_catches_locs)))
+  return(catches)
+}
+
+test <- catch_formatting_fun(catch_dir_list$catch_twenty$rdm$X1991)
+
+
+survey_timeseries <- list()
+# Formatting catch for randomly moving timeseries'
+survey_timeseries$rdm <- list()
+for(coverage in 1:2) {
+  survey_timeseries$rdm[[coverage]] <- list()
+  for(cluster in 1:n_clusters) {
+    survey_timeseries$rdm[[coverage]][[cluster]] <- list()
+    for(year in 1:years) {
+      survey_timeseries$rdm[[coverage]][[cluster]][[year]] <- catch_formatting_fun(catch_rdm_list[[coverage]][[cluster]][[year]])
+    }
+    names(survey_timeseries$rdm[[coverage]][[cluster]]) <- all_years
+  }
+  names(survey_timeseries$rdm[[coverage]]) <- names(clusters)
+}
+names(survey_timeseries$rdm) <- coverage_list
+# Formatting catch for directionally shifting timeseries'
+survey_timeseries$dir <- list()
+for(coverage in 1:2) {
+  survey_timeseries$dir[[coverage]] <- list()
+  for(cluster in 1:n_clusters) {
+    survey_timeseries$dir[[coverage]][[cluster]] <- list()
+    for(year in 1:years) {
+      survey_timeseries$dir[[coverage]][[cluster]][[year]] <- catch_formatting_fun(catch_dir_list[[coverage]][[cluster]][[year]])
+    }
+    names(survey_timeseries$dir[[coverage]][[cluster]]) <- all_years
+  }
+  names(survey_timeseries$dir[[coverage]]) <- names(clusters)
+}
+names(survey_timeseries$dir) <- coverage_list
+
+
+# Checking what the catch looks like by plotting 
+ggplot(survey_timeseries$dir$catch_eighty$cluster_B$X2020) +
+  geom_point(aes(x = x_loc, y = y_loc, color = as.character(metric_tons)))
 
