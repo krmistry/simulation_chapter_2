@@ -14,9 +14,19 @@ x_max <- 500
 y_max <- 500
 ## number of fish
 n_fish <- 100
-## number of cluster scenarios
+## number of cluster scenarios & cluster labels
 n_clusters <- 5
+cluster_names <- c("rdm", paste0("cluster_", c("A", "B", "C", "D")))
 
+## Levels of catch coverage - 80% and 20%
+coverage_list <- c("catch_eighty", "catch_twenty")
+
+## Movement types
+movement_type <- c("rdm", "dir")
+
+## survey years (every other year in timeseries)
+survey_yrs <- all_years[seq_along(all_years) %% 2 > 0]
+names(survey_yrs) <- survey_yrs # so lapply will produced named lists
 
 ### Random, one cluster loose, one cluster tight, two clusters loose, four 
 ### clusters tight at time 0
@@ -96,7 +106,7 @@ timeseries <- list()
 # List to contain each clusters' timeseries with random movement
 timeseries$rdm <- list()
 # Loop to create timeseries for each cluster with random movement
-for (clust_type in 1:length(clusters)) {
+for (clust_type in cluster_names) {
   timeseries$rdm[[clust_type]] <- list()
   # setting up first year with time 0 locations in cluster list
   timeseries$rdm[[clust_type]][[1]] <- clusters[[clust_type]]
@@ -113,7 +123,7 @@ for (clust_type in 1:length(clusters)) {
   }
   names(timeseries$rdm[[clust_type]]) <- all_years
 }
-names(timeseries$rdm) <- names(clusters)
+#names(timeseries$rdm) <- names(clusters)
 
 
 
@@ -207,6 +217,7 @@ plot <- ggplot() +
 
 ## Function for calculating catch 
 # in resulting catches matrix, columns are y, rows are x
+############ *** CURRENTLY SAMPLING EVERY YEAR, FIX THIS AT SOME POINT *** 
 catch_fun <- function(fish_data, 
                       num_x_blocks, 
                       num_y_blocks,
@@ -269,8 +280,7 @@ catch_fun <- function(fish_data,
               zero_catches_locs = zero_catches))
 }
 
-## Levels of catch coverage - 80% and 20%
-coverage_list <- c("catch_eighty", "catch_twenty")
+
 
 # Creating catch data for randomly moving timeseries
 catch_eighty <- list()
@@ -278,12 +288,12 @@ catch_twenty <- list()
 for(cluster in 1:n_clusters) {
   catch_eighty[[cluster]] <- list()
   catch_twenty[[cluster]] <- list()
-  for(year in 1:years) {
+  for(year in survey_yrs) {
     catch_eighty[[cluster]][[year]] <- catch_fun(timeseries$rdm[[cluster]][[year]], 9, 9, total_hauls)
     catch_twenty[[cluster]][[year]] <- catch_fun(timeseries$rdm[[cluster]][[year]], 2, 1, total_hauls)
   }
-  names(catch_eighty[[cluster]]) <- all_years
-  names(catch_twenty[[cluster]]) <- all_years
+  names(catch_eighty[[cluster]]) <- survey_yrs
+  names(catch_twenty[[cluster]]) <- survey_yrs
 }
 names(catch_eighty) <- names(clusters)
 names(catch_twenty) <- names(clusters)
@@ -295,26 +305,20 @@ catch_twenty <- list()
 for(cluster in 1:n_clusters) {
   catch_eighty[[cluster]] <- list()
   catch_twenty[[cluster]] <- list()
-  for(year in 1:years) {
+  for(year in survey_yrs) {
     catch_eighty[[cluster]][[year]] <- catch_fun(timeseries$dir[[cluster]][[year]], 9, 9, total_hauls)
     catch_twenty[[cluster]][[year]] <- catch_fun(timeseries$dir[[cluster]][[year]], 2, 1, total_hauls)
   }
-  names(catch_eighty[[cluster]]) <- all_years
-  names(catch_twenty[[cluster]]) <- all_years
+  names(catch_eighty[[cluster]]) <- survey_yrs
+  names(catch_twenty[[cluster]]) <- survey_yrs
 }
 names(catch_eighty) <- names(clusters)
 names(catch_twenty) <- names(clusters)
 catch_dir_list <- list("catch_eighty" = catch_eighty, "catch_twenty" = catch_twenty)
 
+catchs_fun_outputs_all <- list("rdm" = catch_rdm_list,  "dir" = catch_dir_list)
 
-test <- catch_fun(timeseries$rdm$cluster_A[[1]], 9, 9, total_hauls)
-x <- rbind(test$catch_locs[,c(1:2)], test$zero_catches_locs)
-x[, 3] <- c(rep(1, nrow(test$catch_locs)), rep(0, nrow(test$zero_catches_locs)))
-
-
-
-
-## Formatting catch data into usable timeseries'
+## Function to format catch data into full timeseries'
 catch_formatting_fun <- function(catch_fun_output) {
   catches <- rbind(catch_fun_output$catch_locs[,c(1:2)], catch_fun_output$zero_catches_locs)
   catches$metric_tons <- c(rep(1, nrow(catch_fun_output$catch_locs)), 
@@ -324,7 +328,6 @@ catch_formatting_fun <- function(catch_fun_output) {
 
 test <- catch_formatting_fun(catch_dir_list$catch_twenty$rdm$X1991)
 
-
 survey_timeseries <- list()
 # Formatting catch for randomly moving timeseries'
 survey_timeseries$rdm <- list()
@@ -332,31 +335,93 @@ for(coverage in 1:2) {
   survey_timeseries$rdm[[coverage]] <- list()
   for(cluster in 1:n_clusters) {
     survey_timeseries$rdm[[coverage]][[cluster]] <- list()
-    for(year in 1:years) {
+    for(year in survey_yrs) {
       survey_timeseries$rdm[[coverage]][[cluster]][[year]] <- catch_formatting_fun(catch_rdm_list[[coverage]][[cluster]][[year]])
     }
-    names(survey_timeseries$rdm[[coverage]][[cluster]]) <- all_years
+    names(survey_timeseries$rdm[[coverage]][[cluster]]) <- survey_yrs
   }
   names(survey_timeseries$rdm[[coverage]]) <- names(clusters)
 }
 names(survey_timeseries$rdm) <- coverage_list
+
 # Formatting catch for directionally shifting timeseries'
 survey_timeseries$dir <- list()
 for(coverage in 1:2) {
   survey_timeseries$dir[[coverage]] <- list()
   for(cluster in 1:n_clusters) {
     survey_timeseries$dir[[coverage]][[cluster]] <- list()
-    for(year in 1:years) {
+    for(year in survey_yrs) {
       survey_timeseries$dir[[coverage]][[cluster]][[year]] <- catch_formatting_fun(catch_dir_list[[coverage]][[cluster]][[year]])
     }
-    names(survey_timeseries$dir[[coverage]][[cluster]]) <- all_years
   }
   names(survey_timeseries$dir[[coverage]]) <- names(clusters)
 }
 names(survey_timeseries$dir) <- coverage_list
 
+################################################################################3
+## Checking how many total catches were made in each year for each scenario
+## (may need to adjust the catch coverage if there are too many years with 0s)
 
-# Checking what the catch looks like by plotting 
-ggplot(survey_timeseries$dir$catch_eighty$cluster_B$X2020) +
-  geom_point(aes(x = x_loc, y = y_loc, color = as.character(metric_tons)))
+total_catches <- list()
+for(movement in 1:2) {
+  total_catches[[movement]] <- list()
+  for(coverage in 1:length(coverage_list)) {
+    total_catches[[movement]][[coverage]] <- list()
+    for(cluster in 1:n_clusters) {
+      catches <- as.data.frame(matrix(NA, nrow = length(survey_yrs), ncol = 2))
+      colnames(catches) <- c("Year", "total_catch")
+      catches$Year <- gsub("X", "", survey_yrs)
+      for(year in 1:length(survey_yrs)) {
+        catches$total_catch[year] <-  catchs_fun_outputs_all[[movement]][[coverage]][[cluster]][[survey_yrs[year]]]$total_catch
+      }
+      total_catches[[movement]][[coverage]][[cluster]] <- catches
+    }
+    names(total_catches[[movement]][[coverage]]) <- names(clusters)
+  }
+  names(total_catches[[movement]]) <- coverage_list
+}
+names(total_catches) <- c("rdm", "dir")
 
+
+
+# For plot labels
+movement <- c("Random", "Directional")
+coverages <- c("80%", "20%")
+
+catches_check_fun <- function(total_catch_data,
+                              movement_type,
+                              coverage_type) {
+  clusters_catches <- melt(total_catch_data, id.vars = colnames(total_catch_data$rdm))
+  colnames(clusters_catches)[3] <- "cluster_type"
+  plot <- ggplot(clusters_catches) +
+    geom_point(aes(x = Year, y = total_catch, color = cluster_type)) +
+    geom_path(aes(x = Year, y = total_catch, group = cluster_type, 
+                  color = cluster_type)) +
+    labs(title = paste(movement_type, "movement &", 
+                       coverage_type, "coverage")) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    theme(legend.position = "bottom")
+  return(plot)
+}
+
+catches_check_plots <- list()
+catches_check_plots[[1]] <- catches_check_fun(total_catches$rdm$catch_eighty,
+                                             movement[1],
+                                             coverages[1])
+catches_check_plots[[2]] <- catches_check_fun(total_catches$rdm$catch_twenty,
+                                             movement[1],
+                                             coverages[2])
+catches_check_plots[[3]] <- catches_check_fun(total_catches$dir$catch_eighty,
+                                              movement[2],
+                                              coverages[1])
+catches_check_plots[[4]] <- catches_check_fun(total_catches$dir$catch_twenty,
+                                              movement[2],
+                                              coverages[2])
+  
+saveRDS(catches_check_plots, file = "checking_total_catches_plots.rds")
+## Having 20% coverage, at least with how I'm coding it above, produces quite a lot 
+## of 0s for total catch per year, for most of the cluster scenarios (even 
+## random). Might have to try 40% just to get not quite so many 0s, since my
+## real data only ever had 1 year with 0 for 1 subregion. Moving forward with this
+## for now though, and I'll come back to this after I get the models running

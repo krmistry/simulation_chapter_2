@@ -1,0 +1,73 @@
+
+Banded Hessian (Band width = 2)
+
+ inner maxg = -0.000542921  Inner second time = -0.000542921  Inner f = 43.4289
+ f = 43.4289224863646 max g = 0.0005429206189173641
+Newton raphson 1   f = 43.42892185799953 max g = 3.275157922644212e-15
+
+Initial statistics: 1 variables; iteration 0; function evaluation 0; phase 1
+Function value   2.5126676e+01; maximum gradient component mag   1.0354e+01
+Var   Value    Gradient   |Var   Value    Gradient   |Var   Value    Gradient
+  1  0.00000  1.03535e+01 |
+ inner maxg = -0.000948602  Inner second time = -0.000948602  Inner f = 43.3691
+ f = 43.36911558243717 max g = 0.0009486023720691114
+Newton raphson 1   f = 43.36911498366077 max g = 2.144118216307334e-15
+ inner maxg = -0.000847812  Inner second time = -0.000847812  Inner f = 42.7715
+ f = 42.77145486698583 max g = 0.0008478118561344207
+Newton raphson 1   f = 42.77145352706462 max g = 3.302913498259841e-15
+ inner maxg = -0.000939988  Inner second time = -0.000939988  Inner f = 36.8355
+ f = 36.83554791738509 max g = 0.0009399879282474891
+Newton raphson 1   f = 36.83554681756741 max g = 4.49293380277993e-15
+ inner maxg = -0.000929305  Inner second time = -0.000929305  Inner f = 22.7835
+ f = 22.7834885000232 max g = 0.000929304966315072
+Newton raphson 1   f = 22.7834875491359 max g = 7.112366251504909e-15
+ inner maxg = -0.000640292  Inner second time = -0.000640292  Inner f = -1.59397
+ f = -1.59397319301036 max g = 0.0006402919886931147
+Newton raphson 1   f = -1.593973237625807 max g = 3.783084956410221e-14
+ inner maxg = -0.000177072  Inner second time = -0.000177072  Inner f = -9.84801
+ f = -9.84800792663318 max g = 0.0001770723890102688
+Newton raphson 1   f = -9.848007931401575 max g = 8.630596237679811e-14
+ inner maxg = 0.000926383  Inner second time = 0.000926383  Inner f = -12.5697
+ f = -12.56969406797954 max g = 0.0009263826290972846
+Newton raphson 1   f = -12.56969417347336 max g = 8.738842982580763e-14
+ inner maxg = 0.000858275  Inner second time = 0.000858275  Inner f = -12.8292
+ f = -12.8291844268951 max g = 0.0008582752663068086
+Newton raphson 1   f = -12.82918451522675 max g = 1.262046023242647e-13
+Newton raphson 2   f = -12.82918451522675 max g = 1.262046023242647e-13
+ inner maxg = 0.000856998  Inner second time = 0.000856998  Inner f = -12.8356
+ f = -12.83557778643745 max g = 0.0008569975396142959
+Newton raphson 1   f = -12.83557787443989 max g = 1.058042542467774e-13
+Newton raphson 2   f = -12.83557787443989 max g = 1.058042542467774e-13
+
+ - final statistics:
+1 variables; iteration 7; function evaluation 9
+Function value   1.6543e+01; maximum gradient component mag   1.6738e-06
+Exit code = 1;  converg criter   1.0000e-04
+Var   Value    Gradient   |Var   Value    Gradient   |Var   Value    Gradient
+  1 -1.93759  1.67384e-06 |
+ inner maxg = 0.000856998  Inner second time = 0.000856998  Inner f = -12.8356
+ f = -12.83557778643745 max g = 0.0008569975396142959
+Newton raphson 1   f = -12.83557787443989 max g = 1.058042542467774e-13
+Newton raphson 2   f = -12.83557787443989 max g = 1.058042542467774e-13
+ inner maxg = 0.000856998  Inner second time = 0.000856998  Inner f = -12.8356
+ f = -12.83557778643745 max g = 0.0008569975396142959
+Newton raphson 1   f = -12.83557787443989 max g = 1.058042542467774e-13
+Newton raphson 2   f = -12.83557787443989 max g = 1.058042542467774e-13
+29 1
+Estimating row 1 out of 1 for hessian
+ inner maxg = 0.000855927  Inner second time = 0.000855927  Inner f = -12.841
+ f = -12.84100059016381 max g = 0.0008559271201619006
+Newton raphson 1   f = -12.84100067789002 max g = 1.170764873936747e-13
+Newton raphson 2   f = -12.84100067789002 max g = 1.170764873936747e-13
+ inner maxg = 0.000856461  Inner second time = 0.000856461  Inner f = -12.8383
+ f = -12.83828919823039 max g = 0.0008564608039166449
+Newton raphson 1   f = -12.83828928609437 max g = 1.37174993586342e-13
+Newton raphson 2   f = -12.83828928609437 max g = 1.37174993586342e-13
+ inner maxg = 0.000857537  Inner second time = 0.000857537  Inner f = -12.8329
+ f = -12.83286635478499 max g = 0.000857537338875787
+Newton raphson 1   f = -12.83286644292658 max g = 1.178085407005369e-13
+Newton raphson 2   f = -12.83286644292658 max g = 1.178085407005369e-13
+ inner maxg = 0.00085808  Inner second time = 0.00085808  Inner f = -12.8302
+ f = -12.83015490327304 max g = 0.0008580802133975954
+Newton raphson 1   f = -12.83015499155445 max g = 1.467298504920223e-13
+Newton raphson 2   f = -12.83015499155445 max g = 1.467298504920223e-13
