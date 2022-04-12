@@ -2,10 +2,6 @@
 
 library(R2admb)
 
-### Initially using the full timeseries' (no catch sampling) just to check 
-### that it will run in the models properly - will eventually replace this
-### with the catch timeseries
-
 # Importing functions from RE_model_v2 project
 source("/Users/kellymistry/Desktop/Graduate Work/RE_model_v2/scripts/functions.R")
 
@@ -124,6 +120,10 @@ sub_calculations_fun <- function(data,
       area_surveyed <- nrow(sub_year_data)*0.3
       # Calculate estimated biomass for subregion
       estimates_df$AREA_BIOMASS[year] <- (sum(sub_year_catch)/area_surveyed)*subregion_area
+      # Changing 0s to 0.1 (because RE model breaks with 0 biomass)
+      if(estimates_df$AREA_BIOMASS[year] == 0) {
+        estimates_df$AREA_BIOMASS[year] <- 0.1
+      }
       # Calculating mean and variance for catches in this subregion
       data_mean <- mean(sub_year_data$metric_tons)
       data_var <- var(sub_year_data$metric_tons)
@@ -229,4 +229,8 @@ for(movement in movement_type) {
   }
 }
 
+
+
+# Importing functions from VAST project
+source("/Users/kellymistry/Desktop/Graduate Work/groundfish_VAST/scripts/01_functions.R")
 

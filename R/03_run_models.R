@@ -1,6 +1,6 @@
 
 
-### Run 
+### Run RE model with all scenarios
 
 for(movement in movement_type) {
   for(coverage in coverage_list) {
@@ -21,3 +21,12 @@ for(movement in movement_type) {
     }
   }
 }
+
+
+
+
+
+
+
+
+
