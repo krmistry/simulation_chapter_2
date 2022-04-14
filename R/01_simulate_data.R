@@ -33,17 +33,20 @@ movement_type <- c("rdm", "dir")
 years <- 30
 # Setting arbitrary years (for dataframe labeling)
 all_years <- paste0("X", c((2020-29):2020))
+## survey years (every other year in timeseries)
+survey_yrs <- all_years[seq_along(all_years) %% 2 > 0]
+names(survey_yrs) <- survey_yrs # so lapply will produced named lists
+# Sigma for error to generate stochastic # of total fish in each year
+sigma_ts <- 5
+
 # Sigma for error in random walk
 sigma_rdm <- 5
 # Could use the same sigma as in the random walk, but for now set it 
 # separately 
 sigma_ds <- 5
-### Directional shift parameters
+### Directional shift parameter
 alpha_int <- c(-5, -5) 
 
-## survey years (every other year in timeseries)
-survey_yrs <- all_years[seq_along(all_years) %% 2 > 0]
-names(survey_yrs) <- survey_yrs # so lapply will produced named lists
 
 ### Random, one cluster loose, one cluster tight, two clusters loose, four 
 ### clusters tight at time 0
@@ -108,50 +111,69 @@ clusters$cluster_D$nnd <- nndist(clusters$cluster_D$x_loc,
 ## List to contain both types of timeseries
 timeseries <- list()
 
-# List to contain each clusters' timeseries with random movement
-timeseries$rdm <- list()
-# Loop to create timeseries for each cluster with random movement
-for (clust_type in cluster_names) {
-  timeseries$rdm[[clust_type]] <- list()
-  # setting up first year with time 0 locations in cluster list
-  timeseries$rdm[[clust_type]][[1]] <- clusters[[clust_type]]
-  # Adding fish identifiers for individuals (for plotting)
-  timeseries$rdm[[clust_type]][[1]]$fish <- paste0("fish_", c(1:nrow(clusters[[clust_type]])))
-  for(year in 2:years) {
-    x_year_error <- rnorm(n_fish, 0, sigma_rdm)
-    y_year_error <- rnorm(n_fish, 0, sigma_rdm)
-    x_loc <- timeseries$rdm[[clust_type]][[year - 1]][, 1] + x_year_error
-    y_loc <- timeseries$rdm[[clust_type]][[year - 1]][, 2] + y_year_error
-    nnd <- nndist(x_loc, y_loc)
-    timeseries$rdm[[clust_type]][[year]] <- as.data.frame(cbind(x_loc, y_loc, nnd))
-    timeseries$rdm[[clust_type]][[year]]$fish <- timeseries$rdm[[clust_type]][[1]]$fish
+for(movement in movement_type) {
+  # List to contain each clusters' timeseries 
+  timeseries[[movement]] <- list()
+  # Loop to create timeseries for each cluster 
+  for (clust_type in cluster_names) {
+    timeseries[[movement]][[clust_type]] <- list()
+    # setting up first year with time 0 locations in cluster list
+    timeseries[[movement]][[clust_type]][[1]] <- clusters[[clust_type]]
+    # Adding fish identifiers for individuals (for plotting)
+    #timeseries[[movement]][[clust_type]][[1]]$fish <- paste0("fish_", c(1:nrow(clusters[[clust_type]])))
+    if(movement == "rdm") {
+      for(year in 2:years) {
+        # Generate a new number of fish for each year
+        n_fish_new <- round(rnorm(1, n_fish, sigma_ts))
+        # Generate new error to move fish with a random walk in each year
+        x_year_error <- rnorm(n_fish_new, 0, sigma_rdm)
+        y_year_error <- rnorm(n_fish_new, 0, sigma_rdm)
+        # If more than fish are drawn than exist in the previous year, create new 
+        # starting locations based on existing fish locations, and otherwise the 
+        # appropriate sample from the previous year
+        if(n_fish_new > nrow(timeseries[[movement]][[clust_type]][[year - 1]])) {
+          new_fish <- sample_n(timeseries[[movement]][[clust_type]][[year - 1]], n_fish_new - nrow(timeseries[[movement]][[clust_type]][[year - 1]]))
+          timeseries[[movement]][[clust_type]][[year - 1]] <- rbind(timeseries[[movement]][[clust_type]][[year - 1]],
+                                                                    new_fish)
+        } else if (n_fish_new <= nrow(timeseries[[movement]][[clust_type]][[year - 1]])) { # if less than 100 fish are drawn, sample that many from previous year
+          timeseries[[movement]][[clust_type]][[year - 1]] <- sample_n(timeseries[[movement]][[clust_type]][[year - 1]], n_fish_new)
+        }
+        # Create new locations for each year
+        x_loc <- timeseries[[movement]][[clust_type]][[year - 1]][, 1] + x_year_error
+        y_loc <- timeseries[[movement]][[clust_type]][[year - 1]][, 2] + y_year_error
+        # Calculate nearest neighbor distance for all points
+        nnd <- nndist(x_loc, y_loc)
+        timeseries[[movement]][[clust_type]][[year]] <- as.data.frame(cbind(x_loc, y_loc, nnd))
+        # timeseries[[movement]][[clust_type]][[year]]$fish <- timeseries[[movement]][[clust_type]][[1]]$fish
+      }
+    } else if (movement == "dir") {
+        for(year in 2:years) {# Generate a new number of fish for each year
+          n_fish_new <- round(rnorm(1, n_fish, sigma_ts))
+          # Generate new error to move fish with with stochasticity while shifting directionally with alpha_int in each year
+          x_year_error <- rnorm(n_fish_new, 0, sigma_ds)
+          y_year_error <- rnorm(n_fish_new, 0, sigma_ds)
+          # If more than fish are drawn than exist in the previous year, create new 
+          # starting locations based on existing fish locations, and otherwise the 
+          # appropriate sample from the previous year
+          if(n_fish_new > nrow(timeseries[[movement]][[clust_type]][[year - 1]])) {
+            new_fish <- sample_n(timeseries[[movement]][[clust_type]][[year - 1]], n_fish_new - nrow(timeseries[[movement]][[clust_type]][[year - 1]]))
+            timeseries[[movement]][[clust_type]][[year - 1]] <- rbind(timeseries[[movement]][[clust_type]][[year - 1]],
+                                                                      new_fish)
+          } else if (n_fish_new <= nrow(timeseries[[movement]][[clust_type]][[year - 1]])) { # if less than 100 fish are drawn, sample that many from previous year
+            timeseries[[movement]][[clust_type]][[year - 1]] <- sample_n(timeseries[[movement]][[clust_type]][[year - 1]], n_fish_new)
+          }
+          # Create new locations for each year
+          x_loc <- timeseries$dir[[clust_type]][[year - 1]][, 1] + alpha_int[1] + x_year_error
+          y_loc <- timeseries$dir[[clust_type]][[year - 1]][, 2] + alpha_int[2] + y_year_error
+          # Calculate nearest neighbor distance for all points
+          nnd <- nndist(x_loc, y_loc)
+          timeseries$dir[[clust_type]][[year]] <- as.data.frame(cbind(x_loc, y_loc, nnd))
+          # timeseries$dir[[clust_type]][[year]]$fish <- timeseries$dir[[clust_type]][[1]]$fish
+        }
+    }
+    names(timeseries[[movement]][[clust_type]]) <- all_years
   }
-  names(timeseries$rdm[[clust_type]]) <- all_years
 }
-
-
-
-# List to contain each clusters' timeseries with directional shift movement
-timeseries$dir <- list()
-# Loop to create timeseries for each cluster with random movement
-for (clust_type in cluster_names) {
-  timeseries$dir[[clust_type]] <- list()
-  # setting up first year with time 0 locations in cluster list
-  timeseries$dir[[clust_type]][[1]] <- clusters[[clust_type]]
-  # Adding fish identifiers for individuals (for plotting)
-  timeseries$dir[[clust_type]][[1]]$fish <- paste0("fish_", c(1:nrow(clusters[[clust_type]])))
-  for(year in 2:years) {
-    x_year_error <- rnorm(n_fish, 0, sigma_ds)
-    y_year_error <- rnorm(n_fish, 0, sigma_ds)
-    x_loc <- timeseries$dir[[clust_type]][[year - 1]][, 1] + alpha_int[1] + x_year_error
-    y_loc <- timeseries$dir[[clust_type]][[year - 1]][, 2] + alpha_int[2] + y_year_error
-    nnd <- nndist(x_loc, y_loc)
-    timeseries$dir[[clust_type]][[year]] <- as.data.frame(cbind(x_loc, y_loc, nnd))
-    timeseries$dir[[clust_type]][[year]]$fish <- timeseries$dir[[clust_type]][[1]]$fish
-  }
-  names(timeseries$dir[[clust_type]]) <- all_years
-}
-
 
 
 
@@ -159,7 +181,7 @@ for (clust_type in cluster_names) {
 #### Sample timeseries every other year with 2 levels of detection
 ## assumes "catches" occur in 50x50 blocks, 
 # Scenarios are: 80% and 20% coverage of the space (with perfect detection 
-# in those areas)
+# in the areas where "catch" occurs)
 
 
 
@@ -189,7 +211,7 @@ catch_fun <- function(fish_data,
   catches_x_loc <- vector()
   catches_y_loc <- vector()
   
-  ## Setting up the total number of hauls & zero catch dataframe
+  ## Setting up the total number of hauls (needed for 0 haul calculation)
   #(fixed for now , could be randomly drawn in each year)
   total_hauls <- haul_num
   
@@ -211,7 +233,7 @@ catch_fun <- function(fish_data,
   # Creating catch location matrix
   catches_loc <- cbind(catches_x_loc, catches_y_loc)
   colnames(catches_loc) <- c("x_loc", "y_loc")
-  # Randomly drawing locations that aren't in catches_loc for the rest of
+  # Randomly drawing locations within the whole space for the rest of
   # the hauls, which will automatically have zero catch
   zero_num <- total_hauls - nrow(catches_loc)
   zero_catches <- as.data.frame(matrix(NA, nrow = zero_num, ncol = 2))
@@ -220,7 +242,7 @@ catch_fun <- function(fish_data,
   zero_catches$y_loc <- runif(zero_num, 0, 500)
   # Not currently double checking to be sure I don't have a 0 catch where fish
   # actually are, but they could be missed in the real world anyway, right? So 
-  # I'll leave it like this unless someone tells me differently
+  # I'll leave it like this for now
   
   return(list(catches_matrix = catches, 
               total_catch = sum(catches),
@@ -240,8 +262,8 @@ for(movement in movement_type) {
     for(cluster in cluster_names) {
       catchs_fun_outputs_all[[movement]][[coverage]][[cluster]] <- list()
       for(year in survey_yrs) {
-        catchs_fun_outputs_all[[movement]]$catch_eighty[[cluster]][[year]] <- catch_fun(timeseries$rdm[[cluster]][[year]], 9, 9, total_hauls)
-        catchs_fun_outputs_all[[movement]]$catch_twenty[[cluster]][[year]] <- catch_fun(timeseries$rdm[[cluster]][[year]], 2, 1, total_hauls)
+        catchs_fun_outputs_all[[movement]]$catch_eighty[[cluster]][[year]] <- catch_fun(timeseries[[movement]][[cluster]][[year]], 9, 9, total_hauls)
+        catchs_fun_outputs_all[[movement]]$catch_twenty[[cluster]][[year]] <- catch_fun(timeseries[[movement]][[cluster]][[year]], 2, 1, total_hauls)
       }
     }
   }
@@ -291,16 +313,16 @@ simulated_data$loop_vectors <- list("all_years" = all_years,
 saveRDS(simulated_data, file = "data/simulated_data.rds")
 
 
-################################################################################3
+#######################################################################################
 ## Checking how many total catches were made in each year for each scenario
 ## (may need to adjust the catch coverage if there are too many years with 0s)
 
 total_catches <- list()
-for(movement in 1:2) {
+for(movement in movement_type) {
   total_catches[[movement]] <- list()
-  for(coverage in 1:length(coverage_list)) {
+  for(coverage in coverage_list) {
     total_catches[[movement]][[coverage]] <- list()
-    for(cluster in 1:n_clusters) {
+    for(cluster in cluster_names) {
       catches <- as.data.frame(matrix(NA, nrow = length(survey_yrs), ncol = 2))
       colnames(catches) <- c("Year", "total_catch")
       catches$Year <- gsub("X", "", survey_yrs)
@@ -309,11 +331,9 @@ for(movement in 1:2) {
       }
       total_catches[[movement]][[coverage]][[cluster]] <- catches
     }
-    names(total_catches[[movement]][[coverage]]) <- names(clusters)
   }
-  names(total_catches[[movement]]) <- coverage_list
 }
-names(total_catches) <- c("rdm", "dir")
+
 
 
 
@@ -365,7 +385,8 @@ saveRDS(catches_check_plots, file = "checking_total_catches_plots.rds")
 #################################################################################
 
 ### Originally tried 60% catch, keeping the code just in case I need anything 
-# in here (like the plot)
+## in here (like the plot, which colored in the boxes that were "caught", 
+## although all manually)
 # # 60% version: 64 out of 100 50x50 blocks
 # x_breaks <- sort(sample(seq(0, 450, 50), 8))
 # y_breaks <- sort(sample(seq(0, 450, 50), 8))
