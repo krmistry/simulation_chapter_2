@@ -1,7 +1,8 @@
 
+################################################################################
+### Run RE model 
 
-### Run RE model with all scenarios
-
+# with all scenarios
 for(movement in movement_type) {
   for(coverage in coverage_list) {
     for(cluster in cluster_names) {
@@ -24,9 +25,29 @@ for(movement in movement_type) {
 
 
 
+################################################################################
+### Run VAST model
 
+# with test scenario
+test_folder <- paste0(results_folders$VAST$rdm$catch_eighty$rdm, "/")
 
+fit <- fit_model( "settings"= settings, #all of the settings we set up above
+                  "Lat_i"= Data_Geostat[,'Lat'], #latitude of observation
+                  "Lon_i"= Data_Geostat[,'Lon'],  #longitude of observation
+                  "t_i"= Data_Geostat[,'Year'], #time for each observation
+                  "c_i"= rep(0,nrow(Data_Geostat)), #categories for multivariate analyses; don't actually use this, could comment it out if it doesn't have a fit
+                  "b_i"= Data_Geostat[,'Catch_KG'], #in kg, raw catch or in CPUE per tow
+                  "a_i"= Data_Geostat[,'AreaSwept_km2'], #sampled area for each observation
+                  #                 "v_i"= Data_Geostat[,'Vessel'], #ok to leave in because it's all "missing" in data, so no vessel effects
+                  "input_grid"= input_grid, #only needed if you have a user input extrapolation grid (which I do)
+                  "optimize_args" =list("lower"=-Inf,"upper"=Inf), #TMB argument (?fit_tmb)
+                  "working_dir" = test_folder,
+                  "run_model" = TRUE)
 
+## Plot results, save in plots folder
+plot(fit, working_dir = paste0(test_folder, "Plots/"))
 
-
+## ##
+## Save the VAST model in the results folder
+saveRDS(fit, file =  paste0(test_folder,"VASTfit.RDS"))
 

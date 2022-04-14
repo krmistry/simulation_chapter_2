@@ -2,6 +2,8 @@
 
 # Loading libraries
 library(spatstat) ## for calculating nearest neighbor distances
+library(reshape2)
+library(ggplot2)
 
 #### Scenarios:
 ## 5 clustering scenarios, 2 ways of moving through 30 years of time, and
@@ -20,9 +22,24 @@ cluster_names <- c("rdm", paste0("cluster_", c("A", "B", "C", "D")))
 
 ## Levels of catch coverage - 80% and 20%
 coverage_list <- c("catch_eighty", "catch_twenty")
+# Number of total hauls (roughly 3 times the number of fish)
+total_hauls <- 300
 
 ## Movement types
 movement_type <- c("rdm", "dir")
+
+## Parameters
+# Number of years
+years <- 30
+# Setting arbitrary years (for dataframe labeling)
+all_years <- paste0("X", c((2020-29):2020))
+# Sigma for error in random walk
+sigma_rdm <- 5
+# Could use the same sigma as in the random walk, but for now set it 
+# separately 
+sigma_ds <- 5
+### Directional shift parameters
+alpha_int <- c(-5, -5) 
 
 ## survey years (every other year in timeseries)
 survey_yrs <- all_years[seq_along(all_years) %% 2 > 0]
@@ -78,25 +95,13 @@ clusters$cluster_D$nnd <- nndist(clusters$cluster_D$x_loc,
 #### Setting up timeseries of 30 years, with 2 versions: random (white noise)
 #### and directional shift (south and west)
 
-## Parameters
-# Number of years
-years <- 30
-# Setting arbitrary years (for dataframe labeling)
-all_years <- paste0("X", c((2020-29):2020))
-# Sigma for error in random walk
-sigma_rdm <- 5
-### Directional shift parameters
-alpha_int <- c(-5, -5) 
+
 # x and y values; positive means moving north or east, negative means 
 # moving south or west
 # Do I want this to have some white noise attached, or for it to be set to 
 # the same value throughout the timeseries? I think for clarity, it makes 
 # sense to initially have it as a set value rather than drawn from a 
 # distribution
-
-# Could use the same sigma as in the random walk, but for now set it 
-# separately 
-sigma_ds <- 5
 
 
 ### Create timeseries
@@ -123,14 +128,13 @@ for (clust_type in cluster_names) {
   }
   names(timeseries$rdm[[clust_type]]) <- all_years
 }
-#names(timeseries$rdm) <- names(clusters)
 
 
 
 # List to contain each clusters' timeseries with directional shift movement
 timeseries$dir <- list()
 # Loop to create timeseries for each cluster with random movement
-for (clust_type in 1:length(clusters)) {
+for (clust_type in cluster_names) {
   timeseries$dir[[clust_type]] <- list()
   # setting up first year with time 0 locations in cluster list
   timeseries$dir[[clust_type]][[1]] <- clusters[[clust_type]]
@@ -147,72 +151,16 @@ for (clust_type in 1:length(clusters)) {
   }
   names(timeseries$dir[[clust_type]]) <- all_years
 }
-names(timeseries$dir) <- names(clusters)
+
 
 
 
 
 #### Sample timeseries every other year with 2 levels of detection
-## Below code needs work; copied from what Mark gave me and doesn't seem
-## to work yet
-
-
 ## assumes "catches" occur in 50x50 blocks, 
 # Scenarios are: 80% and 20% coverage of the space (with perfect detection 
 # in those areas)
 
-### Originally tried 60%, keeping the code just in case I go back to this
-#################################################################################
-# 60% version: 64 out of 100 50x50 blocks
-x_breaks <- sort(sample(seq(0, 450, 50), 8))
-y_breaks <- sort(sample(seq(0, 450, 50), 8))
-
-# Using breaks above, get vectors of starting and ending x and y points
-x_start <- x_breaks
-x_end <- c(x_breaks+50)
-x_blocks <- as.data.frame(cbind(x_start, x_end))
-y_start <- y_breaks
-y_end <- c(y_breaks+50)
-y_blocks <- as.data.frame(cbind(y_start, y_end))
-#coverage <- as.data.frame(expand.grid(x_breaks, y_breaks))
-
-# Number of total hauls (roughly 3 times the number of fish)
-total_hauls <- 300
-
-# Plot of 60% coverage example
-plot <- ggplot() +
-  geom_point(data = timeseries$rdm$rdm[[1]], aes(x = x_loc, y = y_loc)) +
-  annotate("rect", fill = "red", alpha = 0.3, 
-             xmin = coverage$x_start[1], xmax = coverage$x_end[1],
-             ymin = coverage$y_start[1], ymax = coverage$y_end[5]) +
-  annotate("rect", fill = "red", alpha = 0.3, 
-           xmin = coverage$x_start[1], xmax = coverage$x_end[1],
-           ymin = coverage$y_start[6], ymax = coverage$y_end[7]) +
-  annotate("rect", fill = "red", alpha = 0.3, 
-           xmin = coverage$x_start[1], xmax = coverage$x_end[1],
-           ymin = coverage$y_start[8], ymax = coverage$y_end[8]) +
-  
-  annotate("rect", fill = "red", alpha = 0.3, 
-           xmin = coverage$x_start[2], xmax = coverage$x_end[3],
-           ymin = coverage$y_start[1], ymax = coverage$y_end[5]) +
-  annotate("rect", fill = "red", alpha = 0.3, 
-           xmin = coverage$x_start[2], xmax = coverage$x_end[3],
-           ymin = coverage$y_start[6], ymax = coverage$y_end[7]) +
-  annotate("rect", fill = "red", alpha = 0.3, 
-           xmin = coverage$x_start[2], xmax = coverage$x_end[3],
-           ymin = coverage$y_start[8], ymax = coverage$y_end[8]) +
-  
-  annotate("rect", fill = "red", alpha = 0.3, 
-           xmin = coverage$x_start[4], xmax = coverage$x_end[8],
-           ymin = coverage$y_start[1], ymax = coverage$y_end[5]) +
-  annotate("rect", fill = "red", alpha = 0.3, 
-           xmin = coverage$x_start[4], xmax = coverage$x_end[8],
-           ymin = coverage$y_start[6], ymax = coverage$y_end[7]) +
-  annotate("rect", fill = "red", alpha = 0.3, 
-           xmin = coverage$x_start[4], xmax = coverage$x_end[8],
-           ymin = coverage$y_start[8], ymax = coverage$y_end[8])
-
-##########################################################################################
 
 
 ## Function for calculating catch 
@@ -282,41 +230,23 @@ catch_fun <- function(fish_data,
 
 
 
-# Creating catch data for randomly moving timeseries
-catch_eighty <- list()
-catch_twenty <- list()
-for(cluster in 1:n_clusters) {
-  catch_eighty[[cluster]] <- list()
-  catch_twenty[[cluster]] <- list()
-  for(year in survey_yrs) {
-    catch_eighty[[cluster]][[year]] <- catch_fun(timeseries$rdm[[cluster]][[year]], 9, 9, total_hauls)
-    catch_twenty[[cluster]][[year]] <- catch_fun(timeseries$rdm[[cluster]][[year]], 2, 1, total_hauls)
-  }
-  names(catch_eighty[[cluster]]) <- survey_yrs
-  names(catch_twenty[[cluster]]) <- survey_yrs
-}
-names(catch_eighty) <- names(clusters)
-names(catch_twenty) <- names(clusters)
-catch_rdm_list <- list("catch_eighty" = catch_eighty, "catch_twenty" = catch_twenty)
+# Creating catch data for all scenario timeseries in nested list
+catchs_fun_outputs_all <- list()
 
-# Creating catch data for cirectionally shifting timeseries
-catch_eighty <- list()
-catch_twenty <- list()
-for(cluster in 1:n_clusters) {
-  catch_eighty[[cluster]] <- list()
-  catch_twenty[[cluster]] <- list()
-  for(year in survey_yrs) {
-    catch_eighty[[cluster]][[year]] <- catch_fun(timeseries$dir[[cluster]][[year]], 9, 9, total_hauls)
-    catch_twenty[[cluster]][[year]] <- catch_fun(timeseries$dir[[cluster]][[year]], 2, 1, total_hauls)
+for(movement in movement_type) {
+  catchs_fun_outputs_all[[movement]] <- list()
+  for(coverage in coverage_list) {
+    catchs_fun_outputs_all[[movement]][[coverage]] <- list()
+    for(cluster in cluster_names) {
+      catchs_fun_outputs_all[[movement]][[coverage]][[cluster]] <- list()
+      for(year in survey_yrs) {
+        catchs_fun_outputs_all[[movement]]$catch_eighty[[cluster]][[year]] <- catch_fun(timeseries$rdm[[cluster]][[year]], 9, 9, total_hauls)
+        catchs_fun_outputs_all[[movement]]$catch_twenty[[cluster]][[year]] <- catch_fun(timeseries$rdm[[cluster]][[year]], 2, 1, total_hauls)
+      }
+    }
   }
-  names(catch_eighty[[cluster]]) <- survey_yrs
-  names(catch_twenty[[cluster]]) <- survey_yrs
 }
-names(catch_eighty) <- names(clusters)
-names(catch_twenty) <- names(clusters)
-catch_dir_list <- list("catch_eighty" = catch_eighty, "catch_twenty" = catch_twenty)
 
-catchs_fun_outputs_all <- list("rdm" = catch_rdm_list,  "dir" = catch_dir_list)
 
 ## Function to format catch data into full timeseries'
 catch_formatting_fun <- function(catch_fun_output) {
@@ -326,37 +256,40 @@ catch_formatting_fun <- function(catch_fun_output) {
   return(catches)
 }
 
-test <- catch_formatting_fun(catch_dir_list$catch_twenty$rdm$X1991)
+# Testing with 1 year in 1 scenario
+# test <- catch_formatting_fun(catch_dir_list$catch_twenty$rdm$X1991)
 
+# Creating catch timeseries for all scenarios in nested list
 survey_timeseries <- list()
-# Formatting catch for randomly moving timeseries'
-survey_timeseries$rdm <- list()
-for(coverage in 1:2) {
-  survey_timeseries$rdm[[coverage]] <- list()
-  for(cluster in 1:n_clusters) {
-    survey_timeseries$rdm[[coverage]][[cluster]] <- list()
-    for(year in survey_yrs) {
-      survey_timeseries$rdm[[coverage]][[cluster]][[year]] <- catch_formatting_fun(catch_rdm_list[[coverage]][[cluster]][[year]])
+for(movement in movement_type) {
+  survey_timeseries[[movement]] <- list()
+  for(coverage in coverage_list) {
+    survey_timeseries[[movement]][[coverage]] <- list()
+    for(cluster in cluster_names) {
+      survey_timeseries[[movement]][[coverage]][[cluster]] <- list()
+      for(year in survey_yrs) {
+        survey_timeseries[[movement]][[coverage]][[cluster]][[year]] <- catch_formatting_fun(catchs_fun_outputs_all[[movement]][[coverage]][[cluster]][[year]])
+      }
     }
-    names(survey_timeseries$rdm[[coverage]][[cluster]]) <- survey_yrs
   }
-  names(survey_timeseries$rdm[[coverage]]) <- names(clusters)
 }
-names(survey_timeseries$rdm) <- coverage_list
 
-# Formatting catch for directionally shifting timeseries'
-survey_timeseries$dir <- list()
-for(coverage in 1:2) {
-  survey_timeseries$dir[[coverage]] <- list()
-  for(cluster in 1:n_clusters) {
-    survey_timeseries$dir[[coverage]][[cluster]] <- list()
-    for(year in survey_yrs) {
-      survey_timeseries$dir[[coverage]][[cluster]][[year]] <- catch_formatting_fun(catch_dir_list[[coverage]][[cluster]][[year]])
-    }
-  }
-  names(survey_timeseries$dir[[coverage]]) <- names(clusters)
-}
-names(survey_timeseries$dir) <- coverage_list
+
+########## Save simulation data & variable vectors ############
+
+simulated_data <- list()
+simulated_data$timeseries_data <- list("real_timeseries" = timeseries, 
+                        "survey_timeseries" = survey_timeseries)
+
+simulated_data$loop_vectors <- list("all_years" = all_years,
+                              "survey_yrs" = survey_yrs,
+                              "movement_type" = movement_type,
+                              "coverage_list" = coverage_list,
+                              "cluster_names" = cluster_names,
+                              "x_y_dims" = c(x_max, y_max))
+
+saveRDS(simulated_data, file = "data/simulated_data.rds")
+
 
 ################################################################################3
 ## Checking how many total catches were made in each year for each scenario
@@ -425,3 +358,61 @@ saveRDS(catches_check_plots, file = "checking_total_catches_plots.rds")
 ## random). Might have to try 40% just to get not quite so many 0s, since my
 ## real data only ever had 1 year with 0 for 1 subregion. Moving forward with this
 ## for now though, and I'll come back to this after I get the models running
+
+
+
+
+#################################################################################
+
+### Originally tried 60% catch, keeping the code just in case I need anything 
+# in here (like the plot)
+# # 60% version: 64 out of 100 50x50 blocks
+# x_breaks <- sort(sample(seq(0, 450, 50), 8))
+# y_breaks <- sort(sample(seq(0, 450, 50), 8))
+# 
+# # Using breaks above, get vectors of starting and ending x and y points
+# x_start <- x_breaks
+# x_end <- c(x_breaks+50)
+# x_blocks <- as.data.frame(cbind(x_start, x_end))
+# y_start <- y_breaks
+# y_end <- c(y_breaks+50)
+# y_blocks <- as.data.frame(cbind(y_start, y_end))
+# #coverage <- as.data.frame(expand.grid(x_breaks, y_breaks))
+# 
+# # Number of total hauls (roughly 3 times the number of fish)
+# total_hauls <- 300
+# 
+# # Plot of 60% coverage example
+# plot <- ggplot() +
+#   geom_point(data = timeseries$rdm$rdm[[1]], aes(x = x_loc, y = y_loc)) +
+#   annotate("rect", fill = "red", alpha = 0.3, 
+#              xmin = coverage$x_start[1], xmax = coverage$x_end[1],
+#              ymin = coverage$y_start[1], ymax = coverage$y_end[5]) +
+#   annotate("rect", fill = "red", alpha = 0.3, 
+#            xmin = coverage$x_start[1], xmax = coverage$x_end[1],
+#            ymin = coverage$y_start[6], ymax = coverage$y_end[7]) +
+#   annotate("rect", fill = "red", alpha = 0.3, 
+#            xmin = coverage$x_start[1], xmax = coverage$x_end[1],
+#            ymin = coverage$y_start[8], ymax = coverage$y_end[8]) +
+#   
+#   annotate("rect", fill = "red", alpha = 0.3, 
+#            xmin = coverage$x_start[2], xmax = coverage$x_end[3],
+#            ymin = coverage$y_start[1], ymax = coverage$y_end[5]) +
+#   annotate("rect", fill = "red", alpha = 0.3, 
+#            xmin = coverage$x_start[2], xmax = coverage$x_end[3],
+#            ymin = coverage$y_start[6], ymax = coverage$y_end[7]) +
+#   annotate("rect", fill = "red", alpha = 0.3, 
+#            xmin = coverage$x_start[2], xmax = coverage$x_end[3],
+#            ymin = coverage$y_start[8], ymax = coverage$y_end[8]) +
+#   
+#   annotate("rect", fill = "red", alpha = 0.3, 
+#            xmin = coverage$x_start[4], xmax = coverage$x_end[8],
+#            ymin = coverage$y_start[1], ymax = coverage$y_end[5]) +
+#   annotate("rect", fill = "red", alpha = 0.3, 
+#            xmin = coverage$x_start[4], xmax = coverage$x_end[8],
+#            ymin = coverage$y_start[6], ymax = coverage$y_end[7]) +
+#   annotate("rect", fill = "red", alpha = 0.3, 
+#            xmin = coverage$x_start[4], xmax = coverage$x_end[8],
+#            ymin = coverage$y_start[8], ymax = coverage$y_end[8])
+
+##########################################################################################

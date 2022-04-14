@@ -1,6 +1,31 @@
 ###### Format simulated data for each model, RE & VAST ########
-
 library(R2admb)
+library(here)
+library(VAST)
+
+# Import simulated data & creating objects with shorter names for easier coding
+simulated_data <- readRDS("data/simulated_data.rds")
+# Vectors for looping
+all_years <- simulated_data$loop_vectors$all_years
+survey_yrs <- simulated_data$loop_vectors$survey_yrs
+movement_type <- simulated_data$loop_vectors$movement_type
+coverage_list <- simulated_data$loop_vectors$coverage_list
+cluster_names <- simulated_data$loop_vectors$cluster_names
+model_type <- c("RE", "VAST")
+
+# Data objects
+timeseries <- simulated_data$timeseries_data$real_timeseries
+survey_timeseries <- simulated_data$timeseries_data$survey_timeseries
+### Hierarchy of survey_timeseries list: (timeseries is the same, but without catch coverage)
+# - movement direction (random (rdm) or directional (dir))
+# - catch coverage (80% (catch_eighty) or 20% (catch_twenty))
+# - cluster types (random (rdm), and cluster A - D)
+# - year (every other year starting in 1991 and ending in 2019 (total of 15 years))
+
+
+# Parameters
+x_max <- simulated_data$loop_vectors$x_y_dims[1]
+y_max <- simulated_data$loop_vectors$x_y_dims[2]
 
 # Importing functions from RE_model_v2 project
 source("/Users/kellymistry/Desktop/Graduate Work/RE_model_v2/scripts/functions.R")
@@ -35,55 +60,90 @@ subregion_label_fun <- function(data) {
   return(data)
 }
 
+# Setting up list of all results folders
+results_folders <- list()
+for(model in model_type) {
+  results_folders[[model]] <- list()
+  for(movement in movement_type) {
+    results_folders[[model]][[movement]] <- list()
+    for(coverage in coverage_list) {
+      results_folders[[model]][[movement]][[coverage]] <- list()
+      for(cluster in cluster_names) {
+        if(model == "RE") {
+          results_folders[[model]][[movement]][[coverage]][[cluster]] <- sapply(subregion_labels,
+                                                                                function(x) {
+                                                                                  paste0(here("results/"),
+                                                                                         model, "/",
+                                                                                         movement, "/",
+                                                                                         coverage, "/",
+                                                                                         cluster, "/",
+                                                                                         x)
+                                                                                })
+          
+        } else if(model == "VAST") {
+          results_folders[[model]][[movement]][[coverage]][[cluster]] <- paste0(here("results/"),
+                                                                                model, "/",
+                                                                                movement, "/",
+                                                                                coverage, "/",
+                                                                                cluster)
+        }
+        # Check if directories already exist; if they do, don't overwrite
+        for(folder in 1:length(results_folders[[model]][[movement]][[coverage]][[cluster]])) {
+          if(!dir.exists(results_folders[[model]][[movement]][[coverage]][[cluster]][folder])) {
+            dir.create(results_folders[[model]][[movement]][[coverage]][[cluster]][folder], recursive = TRUE)
+          } else {
+            print("Directories exist")
+          }
+        }
+      }
+    }
+  }
+}
 
-subregion_label_fun(survey_timeseries$rdm$catch_eighty$rdm$X1991)
-### Hierarchy of survey_timeseries list:
-# - movement direction (random (rdm) or directional (dir))
-# - catch coverage (80% (catch_eighty) or 20% (catch_twenty))
-# - cluster types (random (rdm), and cluster A - D)
-# - year (every other year starting in 1991 and ending in 2019 (total of 15 years))
+
 
 # Classifying survey data by subregion 
 modified_survey_ts <- list()
-modified_survey_ts$rdm <- list()
-modified_survey_ts$dir <- list()
-for(coverage in 1:2) {
-  modified_survey_ts$rdm[[coverage_list[coverage]]] <- list()
-  modified_survey_ts$dir[[coverage_list[coverage]]] <- list()
-  for (cluster in cluster_names) {
-    cluster_rdm_new_list <- list()
-    cluster_dir_new_list <- list()
-    for(year in survey_yrs) {
-      cluster_rdm_new_list[[year]] <- subregion_label_fun(survey_timeseries$rdm[[coverage]][[cluster]][[year]])
-      cluster_dir_new_list[[year]] <- subregion_label_fun(survey_timeseries$dir[[coverage]][[cluster]][[year]])
+for(movement in movement_type) {
+  modified_survey_ts[[movement]] <- list()
+  for(coverage in coverage_list) {
+    modified_survey_ts[[movement]][[coverage]] <- list()
+    for (cluster in cluster_names) {
+      modified_survey_ts[[movement]][[coverage]][[cluster]] <- list()
+      for(year in survey_yrs) {
+        modified_survey_ts[[movement]][[coverage]][[cluster]][[year]] <- subregion_label_fun(survey_timeseries[[movement]][[coverage]][[cluster]][[year]])
+      }
     }
-    modified_survey_ts$rdm[[coverage]][[cluster]] <- cluster_rdm_new_list
-    modified_survey_ts$dir[[coverage]][[cluster]] <- cluster_dir_new_list
   }
 }
 
 
-## Checking how many fish emigrate, when there are just a static 100 fish 
-for(cluster in 1:n_clusters) {
-  for(year in 1:years) {
-    x <- sum(modified_timeseries$rdm[[cluster]][[year]]$Subregion == "outside_region")
-    print(paste0("Cluster ", names(clusters)[cluster], ", ", all_years[year], " - ", x))
-  }
-}
+# Below would require modifying the original timeseries, so would need to add
+# that to run this part again
+# ## Checking how many fish emigrate, when there are just a static 100 fish 
+# for(cluster in 1:n_clusters) {
+#   for(year in 1:years) {
+#     x <- sum(modified_timeseries$rdm[[cluster]][[year]]$Subregion == "outside_region")
+#     print(paste0("Cluster ", names(clusters)[cluster], ", ", all_years[year], " - ", x))
+#   }
+# }
 
 # Not that many - interestingly, there are more that emigrate in the random 
 # scenario than any of the clustered ones (I guess because I centered the 
 # clusters in the space initially)
 
-## Melting years data into a single dataframe to make it easier to do subregion calculations
-melted_years_list <- list()
+## Melting years data into a single dataframe to make it easier to do subregion 
+# calculations, and making years numeric
+melted_yrs_survey_ts <- list()
 for(movement in movement_type) {
-  melted_years_list[[movement]] <- list()
+  melted_yrs_survey_ts[[movement]] <- list()
   for(coverage in coverage_list) {
-    melted_years_list[[movement]][[coverage]] <- list()
+    melted_yrs_survey_ts[[movement]][[coverage]] <- list()
     for(cluster in cluster_names) {
-      melted_years_list[[movement]][[coverage]][[cluster]] <- melt(modified_survey_ts[[movement]][[coverage]][[cluster]], id.vars = colnames(modified_survey_ts[[movement]][[coverage]][[cluster]][[1]]))
-      colnames(melted_years_list[[movement]][[coverage]][[cluster]])[5] <- "Year"
+      melted_yrs_survey_ts[[movement]][[coverage]][[cluster]] <- melt(modified_survey_ts[[movement]][[coverage]][[cluster]], id.vars = colnames(modified_survey_ts[[movement]][[coverage]][[cluster]][[1]]))
+      colnames(melted_yrs_survey_ts[[movement]][[coverage]][[cluster]])[5] <- "Year"
+      melted_yrs_survey_ts[[movement]][[coverage]][[cluster]]$Year <- as.numeric(gsub("X", "", 
+                                                                                      melted_yrs_survey_ts[[movement]][[coverage]][[cluster]]$Year))
     }
   }
 }
@@ -102,15 +162,17 @@ sub_calculations_fun <- function(data,
   sub_estimates <- list()
   # Create list to hold subregion & year row indices
   sub_year_ind <- list()
+  # Create vector with numeric years
+  years <- as.numeric(gsub("X", "", survey_years))
   # Separate out index for one subregion in one year at a time
   for(sub in subregions) {
-    sub_year_ind[[sub]] <- lapply(survey_years,  function(x) {
+    sub_year_ind[[sub]] <- lapply(years,  function(x) {
       ind <- which(data$Year == x & data$Subregion == sub) 
       })
     # Creating dataframe to hold yearly estimates for each subregion
     estimates_df <- as.data.frame(matrix(NA, nrow = length(survey_years), ncol = 3))
     colnames(estimates_df) <- c("YEAR", "AREA_BIOMASS", "BIOMASS_CV")
-    estimates_df$YEAR <- as.numeric(gsub("X", "", survey_years))
+    estimates_df$YEAR <- years
     for(year in 1:length(survey_years)) {
       # Separate data by subregion & year
       sub_year_data <- data[sub_year_ind[[sub]][[year]],]
@@ -157,35 +219,10 @@ for(movement in movement_type) {
   }
 }
 
-# Setting up list of all results folders
-results_folders <- list()
-for(movement in movement_type) {
-  results_folders[[movement]] <- list()
-  for(coverage in coverage_list) {
-    results_folders[[movement]][[coverage]] <- list()
-    for(cluster in cluster_names) {
-      results_folders[[movement]][[coverage]][[cluster]] <- sapply(subregion_labels,
-                                                                   function(x) {
-                                                                     paste0(here("results/"), 
-                                                                            movement, "/",
-                                                                            coverage, "/",
-                                                                            cluster, "/",
-                                                                            x)
-                                                                   })
-      for(folder in 1:length(subregion_labels)) {
-        if(!dir.exists(results_folders[[movement]][[coverage]][[cluster]][folder])) {
-          dir.create(results_folders[[movement]][[coverage]][[cluster]][folder], recursive = TRUE)
-        } else {
-          print("Directories exist")
-        }
-      }
-    }
-  }
-}
 
 
-# Copy re.tpl file from main project folder into all results folders
-folders <- unlist(results_folders)
+# Copy re.tpl file from main project folder into all RE results folders
+folders <- unlist(results_folders$RE)
 for(folder in 1:length(folders)) {
   file.copy(from = here("re.tpl"), 
             to = folders[folder], 
@@ -211,6 +248,7 @@ result_files <- c("rwout.rep",
 start_yr <- as.numeric(gsub("X", "", survey_yrs[1]))
 end_yr <- as.numeric(gsub("X", "", survey_yrs[length(survey_yrs)]))
 
+# Creating re.dat objects for all scenarios & putting the in appropriate folders
 for(movement in movement_type) {
   for(coverage in coverage_list) {
     for(cluster in cluster_names) {
@@ -233,4 +271,88 @@ for(movement in movement_type) {
 
 # Importing functions from VAST project
 source("/Users/kellymistry/Desktop/Graduate Work/groundfish_VAST/scripts/01_functions.R")
+
+# Importing custom extrapolation grid
+user_region <- readRDS("data/user_region.rds")
+input_grid <- cbind(Lat = user_region$Lat,
+                    Lon = user_region$Lon,
+                    Area_km2 = user_region$Area_km2)  # Extrapolation grid area is in 
+# m^2 & is converted to km^2
+gc() 
+
+# min(user_region$Lon)
+# [1] -179.9997
+# max(user_region$Lon)
+# [1] -175.5126
+# min(user_region$Lat)
+# [1] 0.009034906
+# max(user_region$Lat)
+# [1] 4.496422
+
+# Creating subregion longitude borders
+subregion_borders <- list()
+subregion_borders$west <- c(-Inf, (-180 + (x_max/4)/111), (-180 + 2*(x_max/4)/111), (-180 + 3*(x_max/4)/111))
+subregion_borders$east <- c((-180 + (x_max/4)/111), (-180 + 2*(x_max/4)/111), (-180 + 3*(x_max/4)/111), Inf)
+
+# Construct subregion strata limits object required for VAST
+strata.limits <- data.frame(STRATA = as.factor(subregion_labels),
+                            west_border = subregion_borders$west,
+                            east_border = subregion_borders$east)
+
+## Spatial & spatiotemp random effects settings - ***I think these stay the same...
+FieldConfig <- matrix( c("IID","IID",
+                         "IID","IID",
+                         "IID","IID"), #"IID" = independent identical distribution
+                       ncol=2, nrow=3, 
+                       dimnames=list(c("Omega","Epsilon","Beta"), 
+                                     c("Component_1","Component_2")) ) 
+
+
+# Function to convert the original (x,y) coordinates into latitude and longitude
+# where: 
+# (0, 0) = (-180, 0), 
+# (500, 500) = (-175.5, 4.5)
+# (0, 500) = (-180, 4.5)
+# (500, 0) = (-175.5, 0)
+# AND the conversion of degrees to km is: 111 km = 1 degree
+
+lat_long_conversion <- function(data) {
+  data$long <- -180 + data$x_loc/111
+  data$lat = 0 + data$y_loc/111
+  return(data)
+}
+
+## Starting with a test run with 1 scenario (random movement, 80% catch,
+# random clustering)
+test_scenario <- melt(survey_timeseries$rdm$catch_eighty$rdm, id.vars = colnames(survey_timeseries$rdm$catch_eighty$rdm[[1]]))
+colnames(test_scenario)[4] <- "Year"
+test_scenario$Year <- as.numeric(gsub("X", "", test_scenario$Year))
+test_scenario <- lat_long_conversion(test_scenario)
+
+# Create the VAST input Data_Geostat for the test scenario
+Data_Geostat <- test_scenario[,-c(1:2)]
+colnames(Data_Geostat) <- c("Catch_KG", "Year", "Lon", "Lat")
+Data_Geostat$AreaSwept_km2 <- 0.3
+
+# Create RhoConfig object
+RhoConfig  <- c("Beta1" = 2, "Beta2" = 2, 
+                "Epsilon1" = 2, "Epsilon2" = 2)
+
+# Create VAST settings object - ***BIAS CORRECTING TURNED OFF, TURN BACK ON TO RUN FOR REAL
+settings = make_settings(Version = "VAST_v12_0_0", #.cpp version, not software #e.g., "VAST_v12_0_0"
+                         n_x = 500, #knots aka spatial resolution of our estimates
+                         Region = "User", #Region = "gulf_of_alaska" , go to ?make_settings for other built in extrapolation grids
+                         purpose = "index2", #changes default settings
+                         ObsModel= c(2, 1),
+                         ## everything after this is default if you use purpose = "index2"##
+                         FieldConfig = FieldConfig, #spatial & spatiotemp random effects 
+                         RhoConfig = RhoConfig, #temporal settings; default is all 0s, but if I specify this it will be changed here
+                         strata.limits = strata.limits, #define area that you're producing index for
+                         "knot_method" = "grid", #knots in proportion to spatial domain #other option is knot_method="samples"
+                         fine_scale = TRUE, #changes the type of interpolation in your extrapolation area
+                         bias.correct = FALSE, #corrects the index for nonlinear transformation; I want this for the final version, but I can turn it off while I'm messing with the model so it will run faster
+                         use_anisotropy = TRUE) ##correlations decline depend on direction if this argument is TRUE
+
+
+
 
