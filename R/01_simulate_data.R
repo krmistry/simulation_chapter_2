@@ -78,9 +78,9 @@ clusters$cluster_B$nnd <- nndist(clusters$cluster_B$x_loc,
 clusters$cluster_C <- as.data.frame(matrix(NA, nrow = n_fish, ncol = 3))
 colnames(clusters$cluster_C) <- c("x_loc", "y_loc", "nnd")
 clusters$cluster_C$x_loc <- c(rnorm(n_fish/2, 100, 50), 
-                              rnorm(n_fish/2, 300, 50))
+                              rnorm(n_fish/2, 400, 50))
 clusters$cluster_C$y_loc <- c(rnorm(n_fish/2, 100, 50), 
-                              rnorm(n_fish/2, 300, 50))
+                              rnorm(n_fish/2, 400, 50))
 clusters$cluster_C$nnd <- nndist(clusters$cluster_C$x_loc, 
                                  clusters$cluster_C$y_loc)
 # Cluster D

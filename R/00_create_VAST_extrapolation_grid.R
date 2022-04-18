@@ -68,7 +68,8 @@ region_polygon <- spTransform(sps, crs_UTM)
 ### Construct the extroplation grid for VAST using sf package
 ## Size of grid **in meters** (since working in UTM). Controls
 ## the resolution of the grid.
-cell_size <- 2000
+# cell_size <- 2000 # creates a 4 x 4 km grid; may have too many boxes for my area
+cell_size <- 4000 # creates a 16 x 16 km grid (GOA grid was usually 13 km^2)
 ## This step is slow at high resolutions
 region_grid <- st_make_grid(region_polygon, cellsize = cell_size, what = "centers")
 ## Convert region_grid to Spatial Points to SpatialPointsDataFrame

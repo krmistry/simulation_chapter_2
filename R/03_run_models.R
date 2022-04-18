@@ -2,7 +2,7 @@
 ################################################################################
 ### Run RE model 
 
-# with all scenarios
+# with all scenarios with all data
 for(movement in movement_type) {
   for(coverage in coverage_list) {
     for(cluster in cluster_names) {
@@ -30,6 +30,10 @@ for(movement in movement_type) {
 
 # with test scenario
 test_folder <- paste0(results_folders$VAST$rdm$catch_eighty$rdm, "/")
+
+# It was taking an extremely long time to run, so trying it out with epsilons = 0 just
+# to be sure that it isn't messing up without giving an error message
+settings$RhoConfig[3:4] <- c(0, 0)
 
 fit <- fit_model( "settings"= settings, #all of the settings we set up above
                   "Lat_i"= Data_Geostat[,'Lat'], #latitude of observation

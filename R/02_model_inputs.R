@@ -2,6 +2,7 @@
 library(R2admb)
 library(here)
 library(VAST)
+library(reshape2)
 
 # Import simulated data & creating objects with shorter names for easier coding
 simulated_data <- readRDS("data/simulated_data.rds")
@@ -28,7 +29,7 @@ x_max <- simulated_data$loop_vectors$x_y_dims[1]
 y_max <- simulated_data$loop_vectors$x_y_dims[2]
 
 # Importing functions from RE_model_v2 project
-source("/Users/kellymistry/Desktop/Graduate Work/RE_model_v2/scripts/functions.R")
+# source("/Users/kellymistry/Desktop/Graduate Work/RE_model_v2/scripts/functions.R")
 
 # Setting subregion labels
 subregion_labels <- c("one", "two", "three", "four")
@@ -270,14 +271,16 @@ for(movement in movement_type) {
 
 
 # Importing functions from VAST project
-source("/Users/kellymistry/Desktop/Graduate Work/groundfish_VAST/scripts/01_functions.R")
+# source("/Users/kellymistry/Desktop/Graduate Work/groundfish_VAST/scripts/01_functions.R")
 
 # Importing custom extrapolation grid
 user_region <- readRDS("data/user_region.rds")
 input_grid <- cbind(Lat = user_region$Lat,
                     Lon = user_region$Lon,
-                    Area_km2 = user_region$Area_km2)  # Extrapolation grid area is in 
-# m^2 & is converted to km^2
+                    Area_km2 = user_region$Area_km2)  # Extrapolation grid area is in km^2 already
+# input_grid had 62,244 rows - maybe that's too many? Can I decrease it?
+# I technically could, but making the size of the area that each of these is
+# is a centroid for bigger, just not sure if that's a good idea or not? 
 gc() 
 
 # min(user_region$Lon)
@@ -332,7 +335,10 @@ test_scenario <- lat_long_conversion(test_scenario)
 # Create the VAST input Data_Geostat for the test scenario
 Data_Geostat <- test_scenario[,-c(1:2)]
 colnames(Data_Geostat) <- c("Catch_KG", "Year", "Lon", "Lat")
+# Setting area swept to 0.3 km^2
 Data_Geostat$AreaSwept_km2 <- 0.3
+# Converting 1 mt to 1000 kg for each "fish"
+Data_Geostat$Catch_KG <- Data_Geostat$Catch_KG*1000 
 
 # Create RhoConfig object
 RhoConfig  <- c("Beta1" = 2, "Beta2" = 2, 
