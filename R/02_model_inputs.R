@@ -205,6 +205,8 @@ sub_calculations_fun <- function(data,
   return(sub_estimates)
 }
 
+################################################################################
+#################### Creating RE inputs 
 
 # Creating subregion calculations required for RE model
 sub_calc_data <- list()
@@ -269,6 +271,8 @@ for(movement in movement_type) {
 }
 
 
+################################################################################
+#################### Creating VAST inputs 
 
 # Importing functions from VAST project
 # source("/Users/kellymistry/Desktop/Graduate Work/groundfish_VAST/scripts/01_functions.R")
