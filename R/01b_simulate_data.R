@@ -1,10 +1,5 @@
-
-
-
-plot(clusters$cluster_B$x_loc, clusters$cluster_B$y_loc, pch = 16, xlim = c(0, 250), ylim = c(0, 250))
-
-plot(clusters$cluster_C$x_loc, clusters$cluster_C$y_loc, pch = 16, xlim = c(0, 250), ylim = c(0, 250))
-
+## this script contains functions for simulating log-normal catches
+## across a user specified grid & then assigning them pseudo geo-locations
 
 
 ## better rounding function
@@ -14,6 +9,7 @@ about <- function(x, fun = "round", prec = 1) {
   if(prec <= 0) { stop("\"prec\" cannot be less than or equal to 0") }
   do.call(map, list(x / prec)) * prec
 }
+
 
 ## calculate number of schools per grid cell
 catch_loc <- function(data, x_res = 25, y_res = x_res) {
@@ -33,7 +29,8 @@ catch_size <- function(data, sd_log = 2) {
   return(cc)
 }
 
-## random
+
+## test: random
 plot(clusters$rdm$x_loc, clusters$rdm$y_loc, pch = 16, xlim = c(0, 250), ylim = c(0, 250))
 
 c1 <- catch_loc(clusters$rdm)
@@ -43,7 +40,7 @@ b1
 # hist(b1)
 
 
-## cluster A
+## test: cluster A
 plot(clusters$cluster_A$x_loc, clusters$cluster_A$y_loc, pch = 16, xlim = c(0, 250), ylim = c(0, 250))
 
 c2 <- catch_loc(clusters$cluster_A)
