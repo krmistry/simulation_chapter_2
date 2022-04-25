@@ -29,11 +29,11 @@ for(movement in movement_type) {
 ### Run VAST model
 
 # with test scenario
-test_folder <- paste0(results_folders$VAST$rdm$catch_eighty$rdm, "/")
+test_folder <- paste0(results_folders$VAST$dir$catch_eighty$cluster_A, "/")
 
 # It was taking an extremely long time to run, so trying it out with epsilons = 0 just
 # to be sure that it isn't messing up without giving an error message
-settings$RhoConfig[3:4] <- c(0, 0)
+# settings$RhoConfig[3:4] <- c(0, 0)
 
 fit <- fit_model( "settings"= settings, #all of the settings we set up above
                   "Lat_i"= Data_Geostat[,'Lat'], #latitude of observation
@@ -46,7 +46,9 @@ fit <- fit_model( "settings"= settings, #all of the settings we set up above
                   "input_grid"= input_grid, #only needed if you have a user input extrapolation grid (which I do)
                   "optimize_args" =list("lower"=-Inf,"upper"=Inf), #TMB argument (?fit_tmb)
                   "working_dir" = test_folder,
-                  "run_model" = TRUE)
+                  "run_model" = TRUE,
+                  "newtonsteps" = 0) # Reduces the fine tuning of the optimization (so it speeds it up)
+                  #"test_fit" = FALSE)
 
 ## Plot results, save in plots folder
 plot(fit, working_dir = paste0(test_folder, "Plots/"))

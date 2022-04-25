@@ -80,20 +80,28 @@ for(model in model_type) {
                                                                                          cluster, "/",
                                                                                          x)
                                                                                 })
-          
+          # Check if directories already exist; if they do, don't overwrite
+          for(folder in 1:length(results_folders[[model]][[movement]][[coverage]][[cluster]])) {
+            if(!dir.exists(results_folders[[model]][[movement]][[coverage]][[cluster]][folder])) {
+              dir.create(results_folders[[model]][[movement]][[coverage]][[cluster]][folder], recursive = TRUE)
+            } else {
+              print("Directories exist")
+            }
+          }
         } else if(model == "VAST") {
           results_folders[[model]][[movement]][[coverage]][[cluster]] <- paste0(here("results/"),
                                                                                 model, "/",
                                                                                 movement, "/",
                                                                                 coverage, "/",
                                                                                 cluster)
-        }
-        # Check if directories already exist; if they do, don't overwrite
-        for(folder in 1:length(results_folders[[model]][[movement]][[coverage]][[cluster]])) {
-          if(!dir.exists(results_folders[[model]][[movement]][[coverage]][[cluster]][folder])) {
-            dir.create(results_folders[[model]][[movement]][[coverage]][[cluster]][folder], recursive = TRUE)
-          } else {
-            print("Directories exist")
+          # Check if directories already exist; if they do, don't overwrite
+          for(folder in 1:length(results_folders[[model]][[movement]][[coverage]][[cluster]])) {
+            if(!dir.exists(results_folders[[model]][[movement]][[coverage]][[cluster]][folder])) {
+              dir.create(paste0(results_folders[[model]][[movement]][[coverage]][[cluster]][folder], 
+                                "/Plots"), recursive = TRUE)
+            } else {
+              print("Directories exist")
+            }
           }
         }
       }
@@ -342,7 +350,9 @@ colnames(Data_Geostat) <- c("Catch_KG", "Year", "Lon", "Lat")
 # Setting area swept to 0.3 km^2
 Data_Geostat$AreaSwept_km2 <- 0.3
 # Converting 1 mt to 1000 kg for each "fish"
-Data_Geostat$Catch_KG <- Data_Geostat$Catch_KG*1000 
+#Data_Geostat$Catch_KG <- Data_Geostat$Catch_KG*1000 
+# Drawing from a distribution to get a variation in catch (to see if VAST will converge)
+Data_Geostat$Catch_KG <- Data_Geostat$Catch_KG*round(rlnorm(nrow(Data_Geostat), 1, 2)*100)
 
 # Create RhoConfig object
 RhoConfig  <- c("Beta1" = 2, "Beta2" = 2, 
@@ -364,5 +374,33 @@ settings = make_settings(Version = "VAST_v12_0_0", #.cpp version, not software #
                          use_anisotropy = TRUE) ##correlations decline depend on direction if this argument is TRUE
 
 
+########################## Trying VAST with smaller area (250 x 250)
 
+
+user_region <- readRDS("data/user_region_v2.rds")
+input_grid <- cbind(Lat = user_region$Lat,
+                    Lon = user_region$Lon,
+                    Area_km2 = user_region$Area_km2)  # Extrapolation grid area is in km^2 already
+# input_grid had 62,244 rows - maybe that's too many? Can I decrease it?
+# I technically could, but making the size of the area that each of these is
+# is a centroid for bigger, just not sure if that's a good idea or not? 
+gc() 
+
+
+## Starting with a test run with 1 scenario (random movement, 80% catch,
+# random clustering)
+test_scenario_v2 <- melt(survey_timeseries$dir$catch_eighty$cluster_A, id.vars = colnames(survey_timeseries$dir$catch_eighty$cluster_A[[1]]))
+colnames(test_scenario_v2)[4] <- "Year"
+test_scenario_v2$Year <- as.numeric(gsub("X", "", test_scenario_v2$Year))
+test_scenario_v2 <- lat_long_conversion(test_scenario_v2)
+
+# Create the VAST input Data_Geostat for the test scenario
+Data_Geostat <- test_scenario_v2[,-c(1:2)]
+colnames(Data_Geostat) <- c("Catch_KG", "Year", "Lon", "Lat")
+# Setting area swept to 0.3 km^2
+Data_Geostat$AreaSwept_km2 <- 0.3
+# Converting 1 mt to 1000 kg for each "fish"
+#Data_Geostat$Catch_KG <- Data_Geostat$Catch_KG*1000 
+# Drawing from a distribution to get a variation in catch (to see if VAST will converge)
+# Data_Geostat$Catch_KG <- Data_Geostat$Catch_KG*round(rlnorm(nrow(Data_Geostat), 1, 2)*100)
 

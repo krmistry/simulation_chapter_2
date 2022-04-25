@@ -4,6 +4,7 @@
 library(spatstat) ## for calculating nearest neighbor distances
 library(reshape2)
 library(ggplot2)
+library(dplyr)
 
 #### Scenarios:
 ## 5 clustering scenarios, 2 ways of moving through 30 years of time, and
@@ -12,10 +13,16 @@ library(ggplot2)
 
 #### Setting up environment parameters
 ## set (x,y) limits for grid size
-x_max <- 500
-y_max <- 500
+x_max <- 250 # 500
+y_max <- 250 # 500
 ## number of fish
 n_fish <- 100
+## sigmas for clustering
+sigma_a <- 50 # 100
+sigma_b <- 10 # 20
+sigma_c <- 25 # 50
+sigma_d <- sigma_b
+
 ## number of cluster scenarios & cluster labels
 n_clusters <- 5
 cluster_names <- c("rdm", paste0("cluster_", c("A", "B", "C", "D")))
@@ -60,39 +67,43 @@ colnames(clusters$rdm) <- c("x_loc", "y_loc", "nnd")
 clusters$rdm$x_loc <- runif(n_fish, 0, x_max)
 clusters$rdm$y_loc <- runif(n_fish, 0, y_max)
 clusters$rdm$nnd <- nndist(clusters$rdm$x_loc, clusters$rdm$y_loc)
+clusters$rdm$Biomass <- rlnorm(n_fish, 1, 2)*100
 # Cluster A
 clusters$cluster_A <- as.data.frame(matrix(NA, nrow = n_fish, ncol = 3))
 colnames(clusters$cluster_A) <- c("x_loc", "y_loc", "nnd")
-clusters$cluster_A$x_loc <- rnorm(n_fish, 250, 100)
-clusters$cluster_A$y_loc <- rnorm(n_fish, 250, 100)
+clusters$cluster_A$x_loc <- rnorm(n_fish, x_max/2, sigma_a)
+clusters$cluster_A$y_loc <- rnorm(n_fish, y_max/2, sigma_a)
 clusters$cluster_A$nnd <- nndist(clusters$cluster_A$x_loc, 
                                  clusters$cluster_A$y_loc)
+clusters$cluster_A$Biomass <- rlnorm(n_fish, 1, 2)*100
 # Cluster B
 clusters$cluster_B <- as.data.frame(matrix(NA, nrow = n_fish, ncol = 3))
 colnames(clusters$cluster_B) <- c("x_loc", "y_loc", "nnd")
-clusters$cluster_B$x_loc <- rnorm(n_fish, 250, 20)
-clusters$cluster_B$y_loc <- rnorm(n_fish, 250, 20)
+clusters$cluster_B$x_loc <- rnorm(n_fish, x_max/2, sigma_b)
+clusters$cluster_B$y_loc <- rnorm(n_fish, y_max/2, sigma_b)
 clusters$cluster_B$nnd <- nndist(clusters$cluster_B$x_loc, 
                                  clusters$cluster_B$y_loc)
+clusters$cluster_B$Biomass <- rlnorm(n_fish, 1, 2)*100
 # Cluster C
 clusters$cluster_C <- as.data.frame(matrix(NA, nrow = n_fish, ncol = 3))
 colnames(clusters$cluster_C) <- c("x_loc", "y_loc", "nnd")
-clusters$cluster_C$x_loc <- c(rnorm(n_fish/2, 100, 50), 
-                              rnorm(n_fish/2, 400, 50))
-clusters$cluster_C$y_loc <- c(rnorm(n_fish/2, 100, 50), 
-                              rnorm(n_fish/2, 400, 50))
+clusters$cluster_C$x_loc <- c(rnorm(n_fish/2, x_max/3, sigma_c), 
+                              rnorm(n_fish/2, 2*(x_max/3), sigma_c))
+clusters$cluster_C$y_loc <- c(rnorm(n_fish/2, y_max/3, sigma_c), 
+                              rnorm(n_fish/2, 2*(y_max/3), sigma_c))
 clusters$cluster_C$nnd <- nndist(clusters$cluster_C$x_loc, 
                                  clusters$cluster_C$y_loc)
+clusters$cluster_C$Biomass <- rlnorm(n_fish, 1, 2)*100
 # Cluster D
 clusters$cluster_D <- as.data.frame(matrix(NA, nrow = n_fish, ncol = 3))
 colnames(clusters$cluster_D) <- c("x_loc", "y_loc", "nnd")
-clusters$cluster_D$x_loc <- c(rnorm(n_fish/4, 100, 20), rnorm(n_fish/4, 200, 20),
-                              rnorm(n_fish/4, 300, 20), rnorm(n_fish/4, 400, 20))
-clusters$cluster_D$y_loc <- c(rnorm(n_fish/4, 100, 20), rnorm(n_fish/4, 200, 20),
-                              rnorm(n_fish/4, 300, 20), rnorm(n_fish/4, 400, 20))
+clusters$cluster_D$x_loc <- c(rnorm(n_fish/4, x_max/5, sigma_d), rnorm(n_fish/4, 2*(x_max/5), sigma_d),
+                              rnorm(n_fish/4, 3*(x_max/5), sigma_d), rnorm(n_fish/4, 4*(x_max/5), sigma_d))
+clusters$cluster_D$y_loc <- c(rnorm(n_fish/4, y_max/5, sigma_d), rnorm(n_fish/4, 2*(x_max/5), sigma_d),
+                              rnorm(n_fish/4, 3*(y_max/5), sigma_d), rnorm(n_fish/4, 4*(y_max/5), sigma_d))
 clusters$cluster_D$nnd <- nndist(clusters$cluster_D$x_loc, 
                                  clusters$cluster_D$y_loc)
-
+clusters$cluster_D$Biomass <- rlnorm(n_fish, 1, 2)*100
 
 
 #### Setting up timeseries of 30 years, with 2 versions: random (white noise)
@@ -145,6 +156,7 @@ for(movement in movement_type) {
         nnd <- nndist(x_loc, y_loc)
         timeseries[[movement]][[clust_type]][[year]] <- as.data.frame(cbind(x_loc, y_loc, nnd))
         # timeseries[[movement]][[clust_type]][[year]]$fish <- timeseries[[movement]][[clust_type]][[1]]$fish
+        timeseries[[movement]][[clust_type]][[year]]$Biomass <- rlnorm(n_fish_new, 1, 2)*100
       }
     } else if (movement == "dir") {
         for(year in 2:years) {# Generate a new number of fish for each year
@@ -163,18 +175,21 @@ for(movement in movement_type) {
             timeseries[[movement]][[clust_type]][[year - 1]] <- sample_n(timeseries[[movement]][[clust_type]][[year - 1]], n_fish_new)
           }
           # Create new locations for each year
-          x_loc <- timeseries$dir[[clust_type]][[year - 1]][, 1] + alpha_int[1] + x_year_error
-          y_loc <- timeseries$dir[[clust_type]][[year - 1]][, 2] + alpha_int[2] + y_year_error
+          x_loc <- timeseries[[movement]][[clust_type]][[year - 1]][, 1] + alpha_int[1] + x_year_error
+          y_loc <- timeseries[[movement]][[clust_type]][[year - 1]][, 2] + alpha_int[2] + y_year_error
           # Calculate nearest neighbor distance for all points
           nnd <- nndist(x_loc, y_loc)
-          timeseries$dir[[clust_type]][[year]] <- as.data.frame(cbind(x_loc, y_loc, nnd))
+          # Combine locations into dataframe
+          timeseries[[movement]][[clust_type]][[year]] <- as.data.frame(cbind(x_loc, y_loc, nnd))
           # timeseries$dir[[clust_type]][[year]]$fish <- timeseries$dir[[clust_type]][[1]]$fish
+          # Simulate abundance at each location with log normal distribution
+          timeseries[[movement]][[clust_type]][[year]]$Biomass <- rlnorm(n_fish_new, 1, 2)*100
         }
     }
+    
     names(timeseries[[movement]][[clust_type]]) <- all_years
   }
 }
-
 
 
 
@@ -193,12 +208,12 @@ catch_fun <- function(fish_data,
                       num_y_blocks,
                       haul_num) {
   # Creating x and y start and end values for surveyed blocks
-  x_blocks <- as.data.frame(sort(sample(seq(0, 450, 50), num_x_blocks)))
+  x_blocks <- as.data.frame(sort(sample(seq(0, 9*(x_max/10), x_max/10), num_x_blocks)))
   colnames(x_blocks) <- "x_start"
-  x_blocks$x_end <- x_blocks$x_start + 50
-  y_blocks <- as.data.frame(sort(sample(seq(0, 450, 50), num_y_blocks)))
+  x_blocks$x_end <- x_blocks$x_start + x_max/10
+  y_blocks <- as.data.frame(sort(sample(seq(0, 9*(y_max/10), y_max/10), num_y_blocks)))
   colnames(y_blocks) <- "y_start"
-  y_blocks$y_end <- y_blocks$y_start + 50
+  y_blocks$y_end <- y_blocks$y_start + y_max/10
   
   # Setting up looping vectors
   x_dims <- nrow(x_blocks)
@@ -207,9 +222,10 @@ catch_fun <- function(fish_data,
   ## empty matrix for recording catches
   catches <- matrix(NA, x_dims, y_dims, dimnames = list(paste0(x_blocks$x_start, "-", x_blocks$x_end),
                                                         paste0(y_blocks$y_start, "-", y_blocks$y_end)))
-  # empty vectors for recording catch locations
+  # empty vectors for recording catch locations & biomass
   catches_x_loc <- vector()
   catches_y_loc <- vector()
+  catches_biomass <- vector()
   
   ## Setting up the total number of hauls (needed for 0 haul calculation)
   #(fixed for now , could be randomly drawn in each year)
@@ -228,33 +244,34 @@ catch_fun <- function(fish_data,
       loc_ind <- which(xc == TRUE & yc == TRUE)
       catches_x_loc <- c(catches_x_loc, fish_data$x_loc[loc_ind])
       catches_y_loc <- c(catches_y_loc, fish_data$y_loc[loc_ind])
+      catches_biomass <- c(catches_biomass, fish_data$Biomass[loc_ind])
     }
   }
   # Creating catch location matrix
-  catches_loc <- cbind(catches_x_loc, catches_y_loc)
-  colnames(catches_loc) <- c("x_loc", "y_loc")
+  catches_loc <- as.data.frame(cbind(catches_x_loc, catches_y_loc, catches_biomass))
+  colnames(catches_loc) <- c("x_loc", "y_loc", "Biomass")
   # Randomly drawing locations within the whole space for the rest of
   # the hauls, which will automatically have zero catch
   zero_num <- total_hauls - nrow(catches_loc)
-  zero_catches <- as.data.frame(matrix(NA, nrow = zero_num, ncol = 2))
-  colnames(zero_catches) <- c("x_loc", "y_loc")
-  zero_catches$x_loc <- runif(zero_num, 0, 500)
-  zero_catches$y_loc <- runif(zero_num, 0, 500)
+  zero_catches <- as.data.frame(matrix(NA, nrow = zero_num, ncol = 3))
+  colnames(zero_catches) <- c("x_loc", "y_loc", "Biomass")
+  zero_catches$x_loc <- runif(zero_num, 0, x_max)
+  zero_catches$y_loc <- runif(zero_num, 0, y_max)
+  zero_catches$Biomass <- 0
   # Not currently double checking to be sure I don't have a 0 catch where fish
   # actually are, but they could be missed in the real world anyway, right? So 
   # I'll leave it like this for now
   
   return(list(catches_matrix = catches, 
-              total_catch = sum(catches),
-              catch_locs = catches_loc,
-              zero_catches_locs = zero_catches))
+              total_catch = c("total_biomass" = sum(catches_loc$Biomass),
+                              "num_locations" = nrow(catches_loc)),
+              all_catch = rbind(catches_loc, zero_catches)))
 }
 
-
+test <- catch_fun(timeseries$dir$cluster_A$X1991, 9, 9, total_hauls)
 
 # Creating catch data for all scenario timeseries in nested list
 catchs_fun_outputs_all <- list()
-
 for(movement in movement_type) {
   catchs_fun_outputs_all[[movement]] <- list()
   for(coverage in coverage_list) {
@@ -272,9 +289,7 @@ for(movement in movement_type) {
 
 ## Function to format catch data into full timeseries'
 catch_formatting_fun <- function(catch_fun_output) {
-  catches <- rbind(catch_fun_output$catch_locs[,c(1:2)], catch_fun_output$zero_catches_locs)
-  catches$metric_tons <- c(rep(1, nrow(catch_fun_output$catch_locs)), 
-                           rep(0, nrow(catch_fun_output$zero_catches_locs)))
+  catches <- catch_fun_output$all_catch
   return(catches)
 }
 
@@ -437,3 +452,27 @@ saveRDS(catches_check_plots, file = "checking_total_catches_plots.rds")
 #            ymin = coverage$y_start[8], ymax = coverage$y_end[8])
 
 ##########################################################################################
+
+
+
+## Alternate catch, where the timeseries data is used directly, just sampled
+## every other year
+
+x <- seq(1, 30, 2)
+alt_years <- all_years[x]
+
+alt_catch <- list()
+for(movement in movement_type){
+  alt_catch[[movement]] <- list()
+  for (cluster in cluster_names) {
+    alt_catch[[movement]][[cluster]] <- list()
+    for(year in alt_years) {
+      alt_catch[[movement]][[cluster]][[year]] <- timeseries[[movement]][[cluster]][[year]]
+    }
+  }
+}
+
+
+
+
+
